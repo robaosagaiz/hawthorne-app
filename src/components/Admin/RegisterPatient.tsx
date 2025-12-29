@@ -49,11 +49,12 @@ const RegisterPatient: React.FC<RegisterPatientProps> = ({ onCancel, onSuccess }
 
             alert("Funcionalidade de criação de conta automática será implementada na V2 por limitações de segurança do navegador. Por enquanto, apenas o registro do PERFIL será salvo/simulado para vincular ao WhatsApp.");
 
-            // Para MVP, vamos criar um ID fictício para testar o fluxo de "Profile"
-            // Em produção, isso precisa ser o UID real do Firebase Auth.
-            const fakeUid = 'user_' + Math.random().toString(36).substr(2, 9);
+            // Para MVP, vamos usar o Identificador do WhatsApp como ID do Documento.
+            // Isso permite que o sistema de automação encontre o usuário facilmente.
+            // Em produção, ao fazer o SignUp, o sistema irá vincular o Auth UID a este documento.
+            const docId = formData.telefone.trim();
 
-            await createPatientProfile(fakeUid, {
+            await createPatientProfile(docId, {
                 name: formData.nome,
                 email: formData.email,
                 phone: formData.telefone,
@@ -95,10 +96,10 @@ const RegisterPatient: React.FC<RegisterPatientProps> = ({ onCancel, onSuccess }
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefone (WhatsApp)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Identificador (WhatsApp)</label>
                     <div className="relative">
                         <Phone className="absolute top-3 left-3 w-5 h-5 text-gray-400" />
-                        <input type="tel" name="telefone" value={formData.telefone} onChange={handleChange} className="pl-10 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none" placeholder="+55 11 99999-9999" required />
+                        <input type="text" name="telefone" value={formData.telefone} onChange={handleChange} className="pl-10 w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none" placeholder="120363421773958395@g.us" required />
                     </div>
                     <p className="text-xs text-gray-400 mt-1">Essencial para o bot identificar o usuário.</p>
                 </div>

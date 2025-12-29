@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchDailyLogs } from '../../services/dataService';
-import type { DailyLog } from '../../types';
+import { fetchDailyLogs, fetchUserProfile } from '../../services/dataService';
+import type { DailyLog, UserProfile } from '../../types';
 import StatCard from '../ui/StatCard';
 import EnergyChart from './EnergyChart';
 import MacroChart from './MacroChart';
@@ -18,27 +18,54 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
     const [logs, setLogs] = useState<DailyLog[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const targetUid = userId || currentUser?.uid;
+    // Priority: Prop userId -> Profile UID (which might be linked) -> Current Auth UID
+    // Actually, we must fetch profile FIRST to know if there is a link.
+    const initialTargetUid = userId || currentUser?.uid;
 
-    // Targets (could be fetched from user settings in Firestore)
-    const targets = {
-        energy: 1750,
-        protein: 186,
-        carbs: 150,
-        weight: 0 // Target weight logic not fully defined yet
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+    // Default targets (Fallback)
+    const defaultTargets = {
+        energy: 2000,
+        protein: 150,
+        carbs: 200,
+        fats: 60,
+        weight: 0
     };
 
-    useEffect(() => {
-        const loadData = async () => {
-            if (!targetUid) return;
+    const targets = userProfile?.targets || defaultTargets;
 
-            const data = await fetchDailyLogs(targetUid);
-            setLogs(data);
+    // 1. Fetch Profile First
+    useEffect(() => {
+        const loadProfile = async () => {
+            if (!initialTargetUid) return;
+            const profile = await fetchUserProfile(initialTargetUid);
+            setUserProfile(profile);
+        };
+        loadProfile();
+    }, [initialTargetUid]);
+
+    // 2. Fetch Logs based on Profile UID (which handles the link)
+    useEffect(() => {
+        const loadLogs = async () => {
+            // If we have a profile, use its UID (which might be the linked one).
+            // If not (yet), fall back to initialTarget.
+            // But wait, if profile is null, maybe we shouldn't fetch logs yet or we fetch empty?
+
+            const effectiveUid = userProfile?.uid || initialTargetUid;
+
+            if (!effectiveUid) return;
+
+            setLoading(true);
+            const logsData = await fetchDailyLogs(effectiveUid);
+            setLogs(logsData);
             setLoading(false);
         };
 
-        loadData();
-    }, [targetUid]);
+        if (initialTargetUid) {
+            loadLogs();
+        }
+    }, [userProfile, initialTargetUid]);
 
     // Calculate averages
     const averages = logs.length > 0 ? logs.reduce((acc, curr) => ({
@@ -88,7 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
                 />
                 <StatCard
                     title="Peso Atual"
-                    value={currentWeight || 'N/A'}
+                    value={currentWeight || userProfile?.currentWeight || 'N/A'}
                     unit="kg"
                     color="purple"
                     subtext="Último registro"

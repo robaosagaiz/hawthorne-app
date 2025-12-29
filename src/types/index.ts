@@ -24,5 +24,14 @@ export interface UserProfile {
     name: string;
     phone: string;
     role: UserRole;
+    linkedAccountId?: string; // Pointer to another user document
     createdAt?: string;
+    targets?: {
+        energy: number;
+        protein: number;
+        carbs: number;
+        fats: number;
+        weight?: number;
+    };
+    currentWeight?: number;
 }

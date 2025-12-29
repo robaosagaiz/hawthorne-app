@@ -7,14 +7,30 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    match /users/{userId}/{document=**} {
-      // Allow access if user is owner OR user is admin
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    // 1. User Profile Document
+    match /users/{userId} {
+      allow read: if request.auth != null && (
+        request.auth.uid == userId || 
+        isAdmin() || 
+        resource.data.email == request.auth.token.email ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.linkedAccountId == userId
+      );
+      allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+
+    // 2. User Daily Logs Subcollection
+    match /users/{userId}/daily_logs/{logId} {
+       allow read: if request.auth != null && (
+         request.auth.uid == userId || 
+         isAdmin() || 
+         get(/databases/$(database)/documents/users/$(userId)).data.email == request.auth.token.email ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.linkedAccountId == userId
+       );
+       allow write: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
     
-    // Allow users to read their own profile (root user doc)
-    match /users/{userId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-    }
+    // 3. Fallback for other subcollections (if any)
+    // match /users/{userId}/{document=**} { ... } 
+    // Removed to prevent shadowing/conflicts. If we add more subcollections, valid rules must be added.
   }
 }

@@ -1,4 +1,4 @@
-import { collection, query, getDocs, orderBy, doc, getDoc, setDoc, where, writeBatch, type DocumentSnapshot } from 'firebase/firestore';
+import { collection, query, getDocs, orderBy, doc, getDoc, setDoc, where, type DocumentSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 import type { DailyLog, UserProfile } from '../types';
 
@@ -104,50 +104,34 @@ export const createPatientProfile = async (uid: string, data: Omit<UserProfile, 
 export const linkUserToExistingData = async (uid: string, email: string) => {
     try {
         const usersRef = collection(db, 'users');
-        // Find if there is any document with this email BUT NOT the current uid
-        // (Though initially the current uid doc likely doesn't exist or is empty)
         const q = query(usersRef, where('email', '==', email));
         const querySnapshot = await getDocs(q);
 
         let sourceDoc: DocumentSnapshot | null = null;
 
-        querySnapshot.forEach((docSnap) => {
-            // Avoid picking the user's own new doc if it somehow already exists
+        for (const docSnap of querySnapshot.docs) {
             if (docSnap.id !== uid) {
                 sourceDoc = docSnap;
+                break; // Found one, break.
             }
-        });
+        }
 
         if (sourceDoc) {
-            const sourceData = sourceDoc.data();
-            console.log(`Found existing data for ${email} in doc ID: ${sourceDoc.id}. Migrating to ${uid}...`);
+            console.log(`Found existing data for ${email} in doc ID: ${sourceDoc.id}. Linking ${uid} -> ${sourceDoc.id}...`);
 
-            const batch = writeBatch(db);
+            // POINTER STRATEGY:
+            // Instead of copying data, we just create a "Pointer Document" at users/{uid}
+            // that points to users/{sourceDoc.id}.
 
-            // 1. Copy main profile data
-            const targetUserRef = doc(db, 'users', uid);
-            // We use set with merge to be safe, but typically this is a fresh user.
-            // Ensure we update the role or other fields if needed, but primarily we keep the old data.
-            // We also make sure 'uid' field in the data matches the new Auth UID.
-            batch.set(targetUserRef, {
-                ...sourceData,
-                uid: uid
+            await setDoc(doc(db, 'users', uid), {
+                email: email,
+                role: 'patient', // Default role for access
+                linkedAccountId: sourceDoc.id, // THE MAGIC FIELD
+                phone: sourceDoc.id, // Keeping phone equal to ID as requested
+                createdAt: new Date().toISOString()
             }, { merge: true });
 
-            // 2. Copy Daily Logs
-            const sourceLogsRef = collection(db, 'users', sourceDoc.id, 'daily_logs');
-            const sourceLogsSnapshot = await getDocs(sourceLogsRef);
-
-            const targetLogsRef = collection(db, 'users', uid, 'daily_logs');
-
-            sourceLogsSnapshot.forEach((logSnap) => {
-                const logData = logSnap.data();
-                const targetLogDoc = doc(targetLogsRef, logSnap.id); // Keep same ID (date)
-                batch.set(targetLogDoc, logData);
-            });
-
-            await batch.commit();
-            console.log("Migration successful.");
+            console.log("Link successful.");
         } else {
             console.log("No existing data found for this email. Creating default profile.");
             // Optional: Create a default empty profile if needed, or let the app handle it.
@@ -168,4 +152,3 @@ export const linkUserToExistingData = async (uid: string, email: string) => {
         throw error;
     }
 };
-

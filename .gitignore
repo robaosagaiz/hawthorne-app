@@ -12,6 +12,20 @@ dist
 dist-ssr
 *.local
 
+# Credentials (NEVER COMMIT!)
+google-credentials.json
+**/google-credentials.json
+*.pem
+*.key
+
+# Environment files with secrets
+.env
+.env.local
+.env.production
+
+# Server
+server/node_modules
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

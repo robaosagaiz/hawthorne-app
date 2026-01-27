@@ -2,18 +2,23 @@ import React, { useState } from 'react';
 import PatientList from './PatientList';
 import RegisterPatient from './RegisterPatient';
 import Dashboard from '../Dashboard/Dashboard';
+import ReportsView from '../Dashboard/ReportsView';
 import { fetchUserProfile } from '../../services/dataService';
 import { fetchPatientFromApi, checkApiHealth } from '../../services/apiService';
-import { Users, ArrowLeft } from 'lucide-react';
+import { Users, ArrowLeft, BarChart3, FileText } from 'lucide-react';
+
+type TabType = 'dashboard' | 'reports';
 
 const AdminDashboard: React.FC = () => {
     const [view, setView] = useState<'list' | 'register' | 'details'>('list');
     const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
     const [patientName, setPatientName] = useState<string>('');
     const [patientGoal, setPatientGoal] = useState<string>('');
+    const [activeTab, setActiveTab] = useState<TabType>('dashboard');
 
     const handleSelectPatient = async (uid: string) => {
         setSelectedPatientId(uid);
+        setActiveTab('dashboard'); // Reset to dashboard when selecting new patient
         
         // Try API first, then Firestore
         const apiAvailable = await checkApiHealth();
@@ -118,10 +123,43 @@ const AdminDashboard: React.FC = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Tabs */}
+                    <div className="border-b border-gray-200 bg-gray-50">
+                        <nav className="flex">
+                            <button
+                                onClick={() => setActiveTab('dashboard')}
+                                className={`px-6 py-4 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+                                    activeTab === 'dashboard'
+                                        ? 'border-teal-500 text-teal-600 bg-white'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                <BarChart3 size={16} />
+                                Dashboard
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('reports')}
+                                className={`px-6 py-4 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+                                    activeTab === 'reports'
+                                        ? 'border-teal-500 text-teal-600 bg-white'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                <FileText size={16} />
+                                Relatórios Detalhados
+                            </button>
+                        </nav>
+                    </div>
                     
-                    {/* Dashboard Content */}
+                    {/* Tab Content */}
                     <div className="p-6">
-                        <Dashboard userId={selectedPatientId} />
+                        {activeTab === 'dashboard' && (
+                            <Dashboard userId={selectedPatientId} />
+                        )}
+                        {activeTab === 'reports' && (
+                            <ReportsView grupoId={selectedPatientId} />
+                        )}
                     </div>
                 </div>
             )}

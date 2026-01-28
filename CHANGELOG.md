@@ -1,5 +1,37 @@
 # Changelog - Hawthorne App
 
+## [2026-01-28] - TDEE Adaptativo 🧠🔥
+
+### Adicionado
+- **Algoritmo de TDEE Adaptativo** - Calcula o gasto energético real usando:
+  - Consumo calórico diário
+  - Medições seriadas de peso
+  - Regressão linear para taxa de mudança
+  
+- **Componente TDEECard** - Card visual que mostra:
+  - TDEE estimado com nível de confiança
+  - Déficit/superávit atual
+  - Projeção de mudança de peso semanal
+  - Calculadora de metas (ajuste de calorias para objetivo)
+  - Interpretação em linguagem natural
+
+- **Documentação Científica** (`docs/TDEE_ALGORITHM.md`):
+  - Fundamentação teórica do balanço energético
+  - Fórmulas matemáticas detalhadas
+  - Parâmetros configuráveis (ρ, período mínimo, etc.)
+  - Referências científicas
+
+### Fórmula Principal
+```
+TDEE = Média(CI) - (Taxa_Mudança_Peso × ρ)
+```
+Onde:
+- CI = Consumo Calórico
+- ρ = 7000 kcal/kg (densidade energética)
+- Taxa calculada por regressão linear
+
+---
+
 ## [2026-01-27] - Integração com Google Sheets 🎉
 
 ### Adicionado

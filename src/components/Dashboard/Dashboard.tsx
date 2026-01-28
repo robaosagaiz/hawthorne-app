@@ -8,6 +8,7 @@ import EnergyChart from './EnergyChart';
 import MacroChart from './MacroChart';
 import DistributionChart from './DistributionChart';
 import DailyLogTable from './DailyLogTable';
+import TDEECard from './TDEECard';
 import '../../utils/chartSetup';
 import { Cloud, Database, AlertCircle } from 'lucide-react';
 
@@ -219,6 +220,13 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
                             <MacroChart data={logs} />
                         </div>
                     </div>
+
+                    {/* TDEE Adaptativo Card */}
+                    <TDEECard 
+                        dailyLogs={logs} 
+                        targetCalories={targets.energy}
+                        patientGoal="loss"
+                    />
 
                     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                         <div className="p-6 border-b border-gray-100">

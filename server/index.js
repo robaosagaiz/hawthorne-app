@@ -21,7 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-const PORT = 3001; // Fixed port for Hawthorne API
+const PORT = process.env.PORT || 3001;
 
 // CORS config - allow frontend
 app.use(cors({
@@ -30,6 +30,13 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// In production, serve the built frontend
+const distPath = join(__dirname, '..', 'dist');
+if (existsSync(distPath)) {
+  app.use(express.static(distPath));
+  console.log('📦 Serving static frontend from:', distPath);
+}
 
 // Google Sheets Config
 const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID || '1OBQef2UZpkNWAMBIG2mX1RjoXVIolH1ja0jkE11J8GE';
@@ -45,6 +52,23 @@ const CREDENTIAL_PATHS = [
 let sheets = null;
 
 async function initGoogleSheets() {
+  // Try environment variable first (for cloud deployments)
+  if (process.env.GOOGLE_CREDENTIALS_JSON) {
+    try {
+      const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+      const auth = new google.auth.GoogleAuth({
+        credentials,
+        scopes: SCOPES
+      });
+      sheets = google.sheets({ version: 'v4', auth });
+      console.log('✅ Google Sheets initialized from GOOGLE_CREDENTIALS_JSON env var');
+      return true;
+    } catch (err) {
+      console.error('Failed to init from env var:', err.message);
+    }
+  }
+
+  // Fallback to credential files (for local development)
   for (const credPath of CREDENTIAL_PATHS) {
     if (existsSync(credPath)) {
       try {
@@ -280,6 +304,15 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch daily logs', details: error.message });
   }
 });
+
+// SPA fallback: any non-API route serves index.html
+if (existsSync(distPath)) {
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(join(distPath, 'index.html'));
+    }
+  });
+}
 
 // ==================== START SERVER ====================
 

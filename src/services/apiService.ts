@@ -5,7 +5,7 @@
 
 import type { DailyLog, UserProfile } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 // Extended types for API data
 export interface Patient {

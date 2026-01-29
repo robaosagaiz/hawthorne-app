@@ -109,6 +109,7 @@ function parseReport(row) {
     protein: parseFloat(row.totalProtein) || 0,
     carbs: parseFloat(row.totalCarbs) || 0,
     fats: parseFloat(row.totalFat) || 0,
+    weight: row.peso ? parseFloat(row.peso.replace(',', '.')) : null,
     micronutrients: row.micronutrientes,
     consolidation: row.consolidacao,
     dailyGuidance: row.orientacoes_dia,
@@ -206,7 +207,7 @@ app.get('/api/reports/:grupoId', async (req, res) => {
     
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Reports!A1:N500' // Reports can be longer
+      range: 'Reports!A1:O500' // A-O includes peso column
     });
 
     const rows = response.data.values || [];
@@ -247,7 +248,7 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
     
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Reports!A1:N500'
+      range: 'Reports!A1:O500'
     });
 
     const rows = response.data.values || [];
@@ -269,7 +270,7 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
         protein: parseFloat(r.totalProtein) || 0,
         carbs: parseFloat(r.totalCarbs) || 0,
         fats: parseFloat(r.totalFat) || 0,
-        weight: 0 // Weight not in reports, would need to come from Goals or separate tracking
+        weight: r.peso ? parseFloat(r.peso.replace(',', '.')) : null
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 

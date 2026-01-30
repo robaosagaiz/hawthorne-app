@@ -1,95 +1,37 @@
-# Changelog - Hawthorne App
+# Changelog
 
-## [2026-01-28] - TDEE Adaptativo 🧠🔥
+## [0.2.0] - 2026-01-30
 
-### Adicionado
-- **Algoritmo de TDEE Adaptativo** - Calcula o gasto energético real usando:
-  - Consumo calórico diário
-  - Medições seriadas de peso
-  - Regressão linear para taxa de mudança
-  
-- **Componente TDEECard** - Card visual que mostra:
-  - TDEE estimado com nível de confiança
-  - Déficit/superávit atual
-  - Projeção de mudança de peso semanal
-  - Calculadora de metas (ajuste de calorias para objetivo)
-  - Interpretação em linguagem natural
+### 🔴 Correções Críticas
+- **Tela branca no Admin corrigida**: quando a API do Google Sheets falha, agora mostra mensagem de erro clara com botão "Tentar Novamente" em vez de crashar
+- **Loading infinito resolvido**: PatientList agora tem tratamento de erro com feedback visual e retry
 
-- **Documentação Científica** (`docs/TDEE_ALGORITHM.md`):
-  - Fundamentação teórica do balanço energético
-  - Fórmulas matemáticas detalhadas
-  - Parâmetros configuráveis (ρ, período mínimo, etc.)
-  - Referências científicas
+### 🟡 Nova Feature: Acompanhamento de Peso
+- **Coluna de peso na tabela diária**: mostra peso do dia com variação (↑/↓) em relação ao registro anterior
+- **Gráfico de Evolução de Peso** (WeightChart): novo gráfico com linha de peso, peso inicial como referência e meta
+- **Tooltips detalhados**: variação diária e total no hover do gráfico
+- **StatCard de peso atualizado**: mostra peso atual, variação total e número de registros
+- **Backend atualizado**: coluna `peso` adicionada ao parser dos Reports (range A1:O)
 
-### Fórmula Principal
-```
-TDEE = Média(CI) - (Taxa_Mudança_Peso × ρ)
-```
-Onde:
-- CI = Consumo Calórico
-- ρ = 7000 kcal/kg (densidade energética)
-- Taxa calculada por regressão linear
+### 🟢 Melhorias de UX
+- **Mobile responsivo**: lista de pacientes agora usa cards touch-friendly no celular (em vez de tabela cortada)
+- **Tabela de logs responsiva**: colunas de macros escondem no mobile, mantendo data/energia/peso/status
+- **Grid de stats adaptativo**: 2 colunas no mobile, 4 no desktop
+- **Stats bar responsiva**: wrap adequado em telas pequenas
 
----
+### ⚙️ Infraestrutura
+- Servidor aceita `PORT` via env (compatível com Render/Railway)
+- Servidor serve frontend estático + API numa URL só
+- Credenciais Google via `GOOGLE_CREDENTIALS_JSON` env var
+- `render.yaml` para deploy one-click no Render
+- Dockerfile atualizado: Node.js (frontend + API) em vez de nginx-only
 
-## [2026-01-27] - Integração com Google Sheets 🎉
+## [0.1.0] - 2026-01-27
 
-### Adicionado
-- **Backend API** (`/server`) - Servidor Express que lê dados do Google Sheets
-  - `GET /api/health` - Status da conexão
-  - `GET /api/patients` - Lista todos os pacientes (aba Goals)
-  - `GET /api/patients/:grupoId` - Paciente específico
-  - `GET /api/daily-logs/:grupoId` - Logs diários formatados para o Dashboard
-  - `GET /api/reports/:grupoId` - Relatórios completos com análises
-
-- **Serviço de API** (`apiService.ts`) - Camada de abstração para chamar o backend
-  - Fallback automático para Firestore se API indisponível
-  - Conversão de tipos Patient → UserProfile
-
-- **UI Melhorada**
-  - Lista de pacientes com busca e filtros
-  - Indicador de fonte de dados (Google Sheets vs Firestore)
-  - Cards de estatísticas melhorados
-  - Banner do paciente no painel de detalhes
-
-### Alterado
-- `Dashboard.tsx` - Agora busca dados da API primeiro, depois Firestore
-- `PatientList.tsx` - Interface totalmente redesenhada com mais informações
-- `AdminDashboard.tsx` - Header melhorado com navegação
-
-### Dados Reais
-O app agora mostra dados reais de **23 pacientes** vindos da planilha do Google Sheets, incluindo:
-- Metas calóricas e de macros
-- Peso inicial/atual
-- Objetivo (Emagrecimento, Ganho de massa, etc.)
-- Medicação (Tirzepatida, etc.)
-
----
-
-## Como Rodar
-
-### 1. Backend API (Terminal 1)
-```bash
-cd server
-npm install
-npm start
-```
-A API roda em `http://localhost:3001`
-
-### 2. Frontend (Terminal 2)
-```bash
-npm install
-npm run dev
-```
-O app roda em `http://localhost:5173`
-
-### Produção
-Para deploy, você precisa:
-1. Hospedar o backend em algum lugar (Railway, Render, VPS)
-2. Atualizar `VITE_API_URL` no `.env` com a URL do backend
-3. Fazer build: `npm run build`
-4. Servir a pasta `dist/`
-
----
-
-Desenvolvido com ❤️ pela Lola enquanto o Robson voava para NY 🛫
+### Initial Release
+- Dashboard com gráficos de energia, macros e distribuição
+- TDEE Adaptativo
+- Admin panel com lista de pacientes
+- Relatórios detalhados com análises
+- Backend API (Google Sheets → Express)
+- Firebase Auth

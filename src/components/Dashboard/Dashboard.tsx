@@ -7,10 +7,11 @@ import StatCard from '../ui/StatCard';
 import EnergyChart from './EnergyChart';
 import MacroChart from './MacroChart';
 import DistributionChart from './DistributionChart';
+import WeightChart from './WeightChart';
 import DailyLogTable from './DailyLogTable';
 import TDEECard from './TDEECard';
 import '../../utils/chartSetup';
-import { Cloud, Database, AlertCircle } from 'lucide-react';
+import { Cloud, Database, AlertCircle, TrendingDown, TrendingUp, Scale } from 'lucide-react';
 
 interface DashboardProps {
     userId?: string;
@@ -113,7 +114,12 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
         averages.fats = Math.round(averages.fats / logs.length);
     }
 
-    const currentWeight = logs.length > 0 ? logs[logs.length - 1].weight : 0;
+    // Weight tracking
+    const logsWithWeight = logs.filter(l => l.weight && l.weight > 0);
+    const currentWeight = logsWithWeight.length > 0 ? logsWithWeight[logsWithWeight.length - 1].weight : null;
+    const firstWeight = logsWithWeight.length > 0 ? logsWithWeight[0].weight : null;
+    const weightChange = (currentWeight && firstWeight) ? currentWeight - firstWeight : null;
+    const hasWeightData = logsWithWeight.length >= 2;
 
     if (loading) {
         return (
@@ -160,7 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
                 <StatCard
                     title="Média Calórica"
                     value={averages.energy}
@@ -185,10 +191,11 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
                 />
                 <StatCard
                     title="Peso Atual"
-                    value={currentWeight || userProfile?.currentWeight || 'N/A'}
+                    value={currentWeight ? currentWeight.toFixed(1) : (userProfile?.currentWeight || 'N/A')}
                     unit="kg"
                     color="purple"
-                    subtext={userProfile?.currentWeight ? `Inicial: ${userProfile.currentWeight}kg` : "Último registro"}
+                    trend={weightChange !== null ? `${weightChange >= 0 ? '+' : ''}${weightChange.toFixed(1)} kg no período` : undefined}
+                    subtext={userProfile?.currentWeight ? `Inicial: ${userProfile.currentWeight}kg` : (logsWithWeight.length > 0 ? `${logsWithWeight.length} registros` : "Sem dados de peso")}
                 />
             </div>
 
@@ -220,6 +227,35 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
                             <MacroChart data={logs} />
                         </div>
                     </div>
+
+                    {/* Weight Evolution Chart */}
+                    {hasWeightData && (
+                        <div className="bg-white p-6 rounded-xl shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Scale className="w-5 h-5 text-purple-500" />
+                                    <h3 className="text-lg font-bold text-gray-700">Evolução de Peso</h3>
+                                </div>
+                                {weightChange !== null && (
+                                    <div className={`flex items-center gap-1 text-sm font-medium px-3 py-1 rounded-full ${
+                                        weightChange <= 0 
+                                            ? 'bg-green-50 text-green-700' 
+                                            : 'bg-red-50 text-red-600'
+                                    }`}>
+                                        {weightChange <= 0 ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
+                                        {weightChange >= 0 ? '+' : ''}{weightChange.toFixed(1)} kg
+                                    </div>
+                                )}
+                            </div>
+                            <div className="relative h-72">
+                                <WeightChart 
+                                    data={logs}
+                                    initialWeight={userProfile?.currentWeight}
+                                    targetWeight={targets.weight}
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* TDEE Adaptativo Card */}
                     <TDEECard 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchAllPatients } from '../../services/dataService';
 import { fetchPatientsFromApi, checkApiHealth } from '../../services/apiService';
-import { Eye, Target, Pill, TrendingDown, Database, Cloud } from 'lucide-react';
+import { Eye, Target, Pill, TrendingDown, Database, Cloud, AlertTriangle, RefreshCw } from 'lucide-react';
 
 interface PatientListProps {
     onSelectPatient: (uid: string) => void;
@@ -23,13 +23,15 @@ interface DisplayPatient {
 const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) => {
     const [patients, setPatients] = useState<DisplayPatient[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [dataSource, setDataSource] = useState<'api' | 'firestore' | 'none'>('none');
     const [searchTerm, setSearchTerm] = useState('');
 
-    useEffect(() => {
-        const loadPatients = async () => {
-            setLoading(true);
-            
+    const loadPatients = async () => {
+        setLoading(true);
+        setError(null);
+        
+        try {
             // Try API first (Google Sheets - source of truth)
             const apiAvailable = await checkApiHealth();
             
@@ -67,10 +69,19 @@ const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) 
                 setDataSource('firestore');
             } else {
                 setDataSource('none');
+                if (!apiAvailable) {
+                    setError('Não foi possível conectar à API do Google Sheets. Verifique as credenciais.');
+                }
             }
-            
-            setLoading(false);
-        };
+        } catch (err) {
+            console.error('Error loading patients:', err);
+            setError('Erro ao carregar pacientes. Tente novamente.');
+        }
+        
+        setLoading(false);
+    };
+
+    useEffect(() => {
         loadPatients();
     }, []);
 
@@ -83,9 +94,29 @@ const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) 
 
     if (loading) {
         return (
-            <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-4"></div>
-                <p className="text-gray-500">Carregando pacientes...</p>
+            <div className="p-12 text-center bg-white rounded-xl shadow-sm border border-gray-100">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600 mx-auto mb-4"></div>
+                <p className="text-gray-500 font-medium">Carregando pacientes...</p>
+                <p className="text-gray-400 text-sm mt-1">Conectando ao Google Sheets</p>
+            </div>
+        );
+    }
+
+    if (error && patients.length === 0) {
+        return (
+            <div className="p-12 text-center bg-white rounded-xl shadow-sm border border-red-100">
+                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <AlertTriangle className="w-8 h-8 text-red-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Erro ao carregar pacientes</h3>
+                <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">{error}</p>
+                <button
+                    onClick={loadPatients}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-lg hover:bg-teal-700 transition-colors shadow-sm"
+                >
+                    <RefreshCw size={16} />
+                    Tentar Novamente
+                </button>
             </div>
         );
     }
@@ -132,14 +163,14 @@ const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) 
             </div>
 
             {/* Stats Bar */}
-            <div className="px-6 py-3 bg-teal-50 border-b border-teal-100 flex gap-6 text-sm">
+            <div className="px-4 sm:px-6 py-3 bg-teal-50 border-b border-teal-100 flex flex-wrap gap-3 sm:gap-6 text-sm">
                 <span className="text-teal-700">
                     <strong>{filteredPatients.length}</strong> pacientes
                 </span>
                 <span className="text-teal-600">
                     {filteredPatients.filter(p => p.goal?.toLowerCase().includes('emagrecimento')).length} em emagrecimento
                 </span>
-                <span className="text-teal-600">
+                <span className="text-teal-600 hidden sm:inline">
                     {filteredPatients.filter(p => p.medication?.toLowerCase().includes('tirzepatida')).length} com Tirzepatida
                 </span>
             </div>
@@ -150,7 +181,9 @@ const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) 
                     {searchTerm ? 'Nenhum paciente encontrado para a busca.' : 'Nenhum paciente cadastrado.'}
                 </div>
             ) : (
-                <div className="overflow-x-auto">
+                <>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
                             <tr>
@@ -166,7 +199,7 @@ const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) 
                                 <tr key={patient.id} className="bg-white border-b hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 font-medium text-gray-900">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold flex-shrink-0">
                                                 {patient.name.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
@@ -226,6 +259,43 @@ const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) 
                         </tbody>
                     </table>
                 </div>
+
+                {/* Mobile Card List */}
+                <div className="md:hidden divide-y divide-gray-100">
+                    {filteredPatients.map((patient) => (
+                        <button
+                            key={patient.id}
+                            onClick={() => onSelectPatient(patient.id)}
+                            className="w-full p-4 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                                {patient.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="font-semibold text-gray-900 truncate">{patient.name}</div>
+                                <div className="flex flex-wrap items-center gap-2 mt-1">
+                                    {patient.goal && (
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                            patient.goal.toLowerCase().includes('emagrecimento') 
+                                                ? 'bg-orange-100 text-orange-700'
+                                                : patient.goal.toLowerCase().includes('massa')
+                                                    ? 'bg-blue-100 text-blue-700'
+                                                    : 'bg-purple-100 text-purple-700'
+                                        }`}>
+                                            <Target size={10} />
+                                            {patient.goal}
+                                        </span>
+                                    )}
+                                    {patient.initialWeight ? (
+                                        <span className="text-xs text-gray-500">{patient.initialWeight} kg</span>
+                                    ) : null}
+                                </div>
+                            </div>
+                            <Eye size={18} className="text-gray-400 flex-shrink-0" />
+                        </button>
+                    ))}
+                </div>
+                </>
             )}
         </div>
     );

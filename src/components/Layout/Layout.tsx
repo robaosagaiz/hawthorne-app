@@ -2,7 +2,8 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
-import { LogOut, Activity, User as UserIcon, Calendar } from 'lucide-react';
+import { LogOut, User as UserIcon, Calendar } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { currentUser, userProfile } = useAuth();
@@ -20,12 +21,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <header className="bg-teal-600 text-white shadow-lg sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                     <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-teal-500 rounded-lg">
-                            <Activity className="w-6 h-6 text-white" />
-                        </div>
+                        <img src={logoImg} alt="Hawthorne" className="w-10 h-10 rounded-lg" />
                         <div>
-                            <h1 className="text-xl font-bold leading-tight">Relatório Nutricional</h1>
-                            <p className="text-teal-100 text-xs font-medium">Protocolo Hawthorne</p>
+                            <h1 className="text-xl font-bold leading-tight">Hawthorne</h1>
+                            <p className="text-teal-100 text-xs font-medium">Acompanhamento Nutricional</p>
                         </div>
                     </div>
 
@@ -68,7 +67,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
             <footer className="bg-white border-t border-gray-200 py-6">
                 <div className="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
-                    <p>© {new Date().getFullYear()} Protocolo Hawthorne. Todos os direitos reservados.</p>
+                    <p>© {new Date().getFullYear()} Hawthorne. Todos os direitos reservados.</p>
                 </div>
             </footer>
         </div>

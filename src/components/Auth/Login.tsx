@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock } from 'lucide-react';
+import logoImg from '../../assets/logo-128.png';
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -30,11 +30,9 @@ const Login: React.FC = () => {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-600 to-teal-800 p-4">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md transform transition-all hover:scale-[1.01]">
                 <div className="text-center mb-8">
-                    <div className="bg-teal-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Lock className="w-8 h-8 text-teal-600" />
-                    </div>
-                    <h2 className="text-3xl font-bold text-gray-800">Bem-vindo</h2>
-                    <p className="text-gray-500 mt-2">Acesse seu painel nutricional</p>
+                    <img src={logoImg} alt="Hawthorne" className="w-20 h-20 mx-auto mb-4 drop-shadow-md" />
+                    <h2 className="text-3xl font-bold text-gray-800">Hawthorne</h2>
+                    <p className="text-gray-500 mt-2">Acompanhamento nutricional</p>
                 </div>
 
                 {error && (

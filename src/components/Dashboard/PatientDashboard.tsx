@@ -43,6 +43,31 @@ const PatientDashboard: React.FC = () => {
                 </div>
             </div>
 
+            {/* Daily Goals Summary - TOP POSITION */}
+            {sheetsPatient && (
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-bold text-gray-800 mb-4">Suas Metas Diárias</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl">
+                            <p className="text-2xl font-bold text-orange-600">{sheetsPatient.targets.energy}</p>
+                            <p className="text-xs text-orange-700 mt-1">kcal/dia</p>
+                        </div>
+                        <div className="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-xl">
+                            <p className="text-2xl font-bold text-red-600">{sheetsPatient.targets.protein}g</p>
+                            <p className="text-xs text-red-700 mt-1">Proteína</p>
+                        </div>
+                        <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl">
+                            <p className="text-2xl font-bold text-amber-600">{sheetsPatient.targets.carbs}g</p>
+                            <p className="text-xs text-amber-700 mt-1">Carboidratos</p>
+                        </div>
+                        <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+                            <p className="text-2xl font-bold text-blue-600">{sheetsPatient.targets.fats}g</p>
+                            <p className="text-xs text-blue-700 mt-1">Gorduras</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Patient Info Cards (only if sheets data available) */}
             {sheetsPatient && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -149,30 +174,6 @@ const PatientDashboard: React.FC = () => {
                 </div>
             </div>
 
-            {/* Daily Goals Summary */}
-            {sheetsPatient && (
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-800 mb-4">Suas Metas Diárias</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl">
-                            <p className="text-2xl font-bold text-orange-600">{sheetsPatient.targets.energy}</p>
-                            <p className="text-xs text-orange-700 mt-1">kcal/dia</p>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-xl">
-                            <p className="text-2xl font-bold text-red-600">{sheetsPatient.targets.protein}g</p>
-                            <p className="text-xs text-red-700 mt-1">Proteína</p>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl">
-                            <p className="text-2xl font-bold text-amber-600">{sheetsPatient.targets.carbs}g</p>
-                            <p className="text-xs text-amber-700 mt-1">Carboidratos</p>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                            <p className="text-2xl font-bold text-blue-600">{sheetsPatient.targets.fats}g</p>
-                            <p className="text-xs text-blue-700 mt-1">Gorduras</p>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

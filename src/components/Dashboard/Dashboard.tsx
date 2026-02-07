@@ -11,7 +11,7 @@ import WeightChart from './WeightChart';
 import DailyLogTable from './DailyLogTable';
 import TDEECard from './TDEECard';
 import '../../utils/chartSetup';
-import { Cloud, Database, AlertCircle, TrendingDown, TrendingUp, Scale } from 'lucide-react';
+import { Cloud, Database, AlertCircle, TrendingDown, TrendingUp, Scale, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface DashboardProps {
     userId?: string;
@@ -23,6 +23,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
     const [loading, setLoading] = useState(true);
     const [dataSource, setDataSource] = useState<'api' | 'firestore' | 'none'>('none');
     const [error, setError] = useState<string | null>(null);
+    const [showDetailedLog, setShowDetailedLog] = useState(false);
 
     // Priority: Prop userId -> Current Auth UID
     const targetId = userId || currentUser?.uid;
@@ -265,11 +266,21 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
                     />
 
                     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                        <div className="p-6 border-b border-gray-100">
-                            <h3 className="text-lg font-bold text-gray-700">Registro Diário Detalhado</h3>
-                            <p className="text-sm text-gray-400 mt-1">{logs.length} registros encontrados</p>
-                        </div>
-                        <DailyLogTable data={logs} targetEnergy={targets.energy} />
+                        <button
+                            onClick={() => setShowDetailedLog(!showDetailedLog)}
+                            className="w-full p-6 border-b border-gray-100 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                        >
+                            <div className="text-left">
+                                <h3 className="text-lg font-bold text-gray-700">Registro Diário Detalhado</h3>
+                                <p className="text-sm text-gray-400 mt-1">{logs.length} registros encontrados</p>
+                            </div>
+                            <div className={`p-2 rounded-full ${showDetailedLog ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-400'} transition-colors`}>
+                                {showDetailedLog ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                            </div>
+                        </button>
+                        {showDetailedLog && (
+                            <DailyLogTable data={logs} targetEnergy={targets.energy} />
+                        )}
                     </div>
                 </>
             ) : (

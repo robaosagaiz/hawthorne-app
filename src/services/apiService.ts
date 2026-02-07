@@ -123,6 +123,51 @@ export function patientToUserProfile(patient: Patient): UserProfile {
   };
 }
 
+// Fetch goal history for a patient
+export async function fetchGoalHistory(grupoId: string): Promise<Patient[]> {
+  try {
+    const response = await fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}/goal-history`);
+    if (!response.ok) throw new Error('Failed to fetch goal history');
+    return await response.json();
+  } catch (error) {
+    console.error('API Error (goal-history):', error);
+    return [];
+  }
+}
+
+// Update goals for a patient
+export async function updateGoals(grupoId: string, goals: { energy: number; protein: number; carbs: number; fats: number }): Promise<{ success: boolean; message?: string }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}/goals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(goals)
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('API Error (update-goals):', error);
+    return { success: false, message: 'Erro de conexão' };
+  }
+}
+
+// Start new protocol for a patient
+export async function startNewProtocol(grupoId: string, data: {
+  energy: number; protein: number; carbs: number; fats: number;
+  initialWeight: number; goal?: string; medication?: string;
+}): Promise<{ success: boolean; message?: string }> {
+  try {
+    const response = await fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}/new-protocol`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('API Error (new-protocol):', error);
+    return { success: false, message: 'Erro de conexão' };
+  }
+}
+
 // Find patient by name (for user lookup)
 export async function findPatientByName(name: string): Promise<Patient | null> {
   const patients = await fetchPatientsFromApi();

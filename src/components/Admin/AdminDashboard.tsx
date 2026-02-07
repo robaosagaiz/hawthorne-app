@@ -6,6 +6,7 @@ import ReportsView from '../Dashboard/ReportsView';
 import { fetchUserProfile } from '../../services/dataService';
 import { fetchPatientFromApi, checkApiHealth } from '../../services/apiService';
 import { Users, ArrowLeft, BarChart3, FileText } from 'lucide-react';
+import GoalsManager from './GoalsManager';
 
 type TabType = 'dashboard' | 'reports';
 
@@ -15,6 +16,8 @@ const AdminDashboard: React.FC = () => {
     const [patientName, setPatientName] = useState<string>('');
     const [patientGoal, setPatientGoal] = useState<string>('');
     const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+    const [patientTargets, setPatientTargets] = useState({ energy: 0, protein: 0, carbs: 0, fats: 0 });
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const handleSelectPatient = async (uid: string) => {
         setSelectedPatientId(uid);
@@ -27,6 +30,7 @@ const AdminDashboard: React.FC = () => {
             if (patient) {
                 setPatientName(patient.name);
                 setPatientGoal(patient.goal || '');
+                setPatientTargets(patient.targets || { energy: 0, protein: 0, carbs: 0, fats: 0 });
                 setView('details');
                 return;
             }
@@ -121,6 +125,25 @@ const AdminDashboard: React.FC = () => {
                                     ID: {selectedPatientId.substring(0, 20)}...
                                 </p>
                             </div>
+                        </div>
+                        
+                        {/* Goals Manager Buttons */}
+                        <div className="mt-4">
+                            <GoalsManager
+                                grupoId={selectedPatientId}
+                                patientName={patientName}
+                                currentTargets={patientTargets}
+                                onGoalsUpdated={() => {
+                                    setRefreshKey(k => k + 1);
+                                    // Re-fetch patient data
+                                    fetchPatientFromApi(selectedPatientId!).then(p => {
+                                        if (p) {
+                                            setPatientTargets(p.targets);
+                                            setPatientGoal(p.goal || '');
+                                        }
+                                    });
+                                }}
+                            />
                         </div>
                     </div>
 

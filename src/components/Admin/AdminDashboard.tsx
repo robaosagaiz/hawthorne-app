@@ -178,7 +178,7 @@ const AdminDashboard: React.FC = () => {
                     {/* Tab Content */}
                     <div className="p-6">
                         {activeTab === 'dashboard' && (
-                            <Dashboard userId={selectedPatientId} />
+                            <Dashboard key={refreshKey} userId={selectedPatientId} />
                         )}
                         {activeTab === 'reports' && (
                             <ReportsView grupoId={selectedPatientId} />

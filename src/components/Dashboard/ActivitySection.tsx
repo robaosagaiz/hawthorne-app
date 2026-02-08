@@ -101,7 +101,8 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
     ? Math.round(last7Steps.reduce((sum, s) => sum + (s.value || 0), 0) / last7Steps.length)
     : null;
   const latestSteps = stepsRecords.length > 0 ? stepsRecords[stepsRecords.length - 1] : null;
-  const isSedentary = latestSteps?.value ? latestSteps.value < 5000 : null;
+  // Use average steps (7 days) for classification; fallback to latest single record
+  const isSedentary = avgSteps !== null ? avgSteps < 5000 : (latestSteps?.value ? latestSteps.value < 5000 : null);
 
   // Classification
   const getClassification = () => {
@@ -189,14 +190,23 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
                 <span className="text-xs text-white/90 font-medium">
                   🏋️ {weekExercises.length} treinos/sem
                 </span>
+                <span className="text-[10px] text-white/60 block">meta: 3+</span>
               </div>
-              {latestSteps?.value && (
+              {avgSteps !== null ? (
+                <div className="bg-white/20 backdrop-blur rounded-lg px-3 py-1.5">
+                  <span className="text-xs text-white/90 font-medium">
+                    👟 {avgSteps.toLocaleString('pt-BR')} passos/dia
+                  </span>
+                  <span className="text-[10px] text-white/60 block">média 7 dias • meta: 5.000+</span>
+                </div>
+              ) : latestSteps?.value ? (
                 <div className="bg-white/20 backdrop-blur rounded-lg px-3 py-1.5">
                   <span className="text-xs text-white/90 font-medium">
                     👟 {latestSteps.value.toLocaleString('pt-BR')} passos
                   </span>
+                  <span className="text-[10px] text-white/60 block">último registro • meta: 5.000+</span>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

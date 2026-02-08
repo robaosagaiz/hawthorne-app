@@ -56,9 +56,9 @@ const StreakCounter: React.FC<StreakCounterProps> = ({ logs }) => {
 
   if (streak === 0) {
     return (
-      <div className="flex items-center gap-2 text-slate-400">
+      <div className="flex items-center gap-2 text-white/90">
         <Flame className="w-4 h-4" />
-        <span className="text-xs">{getMessage()}</span>
+        <span className="text-xs font-medium">{getMessage()}</span>
       </div>
     );
   }
@@ -70,14 +70,14 @@ const StreakCounter: React.FC<StreakCounterProps> = ({ logs }) => {
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 200 }}
     >
-      <div className="flex items-center gap-1.5 bg-orange-50 text-orange-600 px-3 py-1.5 rounded-full">
-        <Flame className="w-4 h-4" />
+      <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur text-white px-3 py-1.5 rounded-full">
+        <Flame className="w-4 h-4 text-yellow-300" />
         <span className="text-sm font-bold tabular-nums">{streak}</span>
         <span className="text-xs font-medium">
           {streak === 1 ? 'dia' : 'dias'}
         </span>
       </div>
-      <span className="text-xs text-slate-500">{getMessage()}</span>
+      <span className="text-xs text-white/80 font-medium">{getMessage()}</span>
     </motion.div>
   );
 };

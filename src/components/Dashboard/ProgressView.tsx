@@ -180,7 +180,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <TDEECardV2 grupoId={targetId} isAdmin={false} />
+          <TDEECardV2 grupoId={targetId} targetCalories={targets.energy} isAdmin={false} />
         </motion.div>
       )}
 

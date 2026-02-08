@@ -66,6 +66,7 @@ const StreakCounter: React.FC<StreakCounterProps> = ({ logs }) => {
   return (
     <motion.div
       className="flex items-center gap-2"
+      data-tour="streak"
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 200 }}

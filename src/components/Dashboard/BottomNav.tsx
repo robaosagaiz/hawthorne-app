@@ -19,7 +19,7 @@ const tabs: { id: PatientTab; label: string; icon: React.ElementType }[] = [
 
 const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, hasUnloggedToday }) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
+    <nav data-tour="bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;

@@ -23,7 +23,7 @@ const MacroProgressBars: React.FC<MacroProgressBarsProps> = ({ protein, carbs, f
   const values = { protein, carbs, fats };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-tour="macros">
       {macros.map((macro, i) => {
         const value = values[macro.key];
         const target = targets[macro.key];

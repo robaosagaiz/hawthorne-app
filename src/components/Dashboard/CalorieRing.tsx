@@ -33,7 +33,7 @@ const CalorieRing: React.FC<CalorieRingProps> = ({ consumed, target, size = 200 
   const remaining = Math.max(target - consumed, 0);
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center" data-tour="calorie-ring">
       <div className="relative" style={{ width: size, height: size }}>
         {/* Background circle */}
         <svg className="absolute inset-0 -rotate-90" width={size} height={size}>

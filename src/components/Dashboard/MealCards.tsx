@@ -64,7 +64,7 @@ const MealCards: React.FC<MealCardsProps> = ({ items }) => {
   });
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-tour="meals">
       {periodConfig.map((period) => {
         const meals = grouped[period.key];
         if (!meals || meals.length === 0) return null;

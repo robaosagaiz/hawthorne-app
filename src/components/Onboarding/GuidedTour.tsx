@@ -34,6 +34,11 @@ const allSteps: TourStep[] = [
     title: 'Sua sequência 🔥',
     description: 'Quantos dias seguidos você registrou. Consistência é o segredo!',
   },
+  {
+    target: '[data-tour="tdee"]',
+    title: 'Seu gasto energético 📈',
+    description: 'Calculamos quanto seu corpo gasta por dia com base nos seus registros de alimentação e peso. Quanto mais preciso, melhor!',
+  },
 ];
 
 interface GuidedTourProps {

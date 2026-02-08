@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import {
   Utensils, Activity, MessageCircle, ChevronRight,
-  ChevronLeft, Sparkles, Target, Camera, AtSign
+  ChevronLeft, Sparkles, Target, Camera, AtSign, TrendingUp
 } from 'lucide-react';
 
 interface OnboardingSlide {
@@ -138,6 +138,45 @@ const slides: OnboardingSlide[] = [
               <strong>Registre no dia:</strong> quanto mais perto da refeição, melhor a precisão
             </p>
           </div>
+        </div>
+      </div>
+    ),
+  },
+  {
+    title: 'Seu gasto energético real',
+    subtitle: 'Quanto mais preciso o registro, melhor o resultado',
+    icon: <TrendingUp className="w-12 h-12 text-teal-600" />,
+    bgGradient: 'from-teal-500 to-emerald-600',
+    iconBg: 'bg-teal-100',
+    content: (
+      <div className="space-y-4">
+        <p className="text-slate-600 leading-relaxed text-center">
+          Com base nos seus registros de <strong>alimentação</strong> e <strong>peso</strong>, calculamos seu <strong>gasto energético real</strong> — quantas calorias seu corpo gasta por dia.
+        </p>
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
+          <div className="flex items-start gap-3">
+            <span className="text-lg">🍽️</span>
+            <p className="text-slate-600 text-sm">
+              <strong>Food log preciso</strong> — descreva com detalhes (gramas, porções) para um cálculo confiável
+            </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="text-lg">⚖️</span>
+            <p className="text-slate-600 text-sm">
+              <strong>Peso regular</strong> — registre seu peso pelo menos 2-3x por semana para acompanhar a evolução
+            </p>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="text-lg">📈</span>
+            <p className="text-slate-600 text-sm">
+              <strong>Resultado</strong> — um gasto energético preciso para decisões clínicas mais assertivas no seu acompanhamento
+            </p>
+          </div>
+        </div>
+        <div className="bg-teal-50 rounded-xl p-3">
+          <p className="text-teal-700 text-sm text-center">
+            💡 Quanto mais consistente seus registros, mais preciso o cálculo — e melhor o resultado do seu tratamento!
+          </p>
         </div>
       </div>
     ),

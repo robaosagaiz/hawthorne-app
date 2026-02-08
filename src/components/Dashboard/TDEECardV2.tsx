@@ -179,7 +179,7 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
   const deficit = getDeficitMessage();
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" data-tour="tdee">
       {/* Header — clean, patient-friendly */}
       <div className="p-5 pb-0">
         <div className="flex items-center justify-between">

@@ -28,7 +28,7 @@ const PORT = process.env.PORT || 3001;
 
 // CORS config
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', process.env.FRONTEND_URL].filter(Boolean),
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://100.114.182.121:5173', process.env.FRONTEND_URL].filter(Boolean),
   credentials: true
 }));
 
@@ -483,6 +483,148 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch daily logs', details: error.message });
   }
 });
+
+// Get activities for a patient (weight, exercise, steps)
+app.get('/api/activities/:grupoId', async (req, res) => {
+  if (!sheets) return res.status(503).json({ error: 'Google Sheets not initialized' });
+
+  try {
+    const { grupoId } = req.params;
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Activities!A1:H500'
+    });
+
+    const rows = response.data.values || [];
+    if (rows.length < 2) return res.json([]);
+
+    const headers = rows[0];
+    const dataRows = rows.slice(1);
+    const rawData = rowsToObjects(headers, dataRows);
+
+    const activities = rawData
+      .filter(r => r.grupo === grupoId)
+      .map(r => ({
+        grupo: r.grupo,
+        date: r.date,
+        type: r.type, // peso, forca, cardio, passos
+        durationMin: r.duration_min ? parseInt(r.duration_min) : null,
+        value: r.value ? parseFloat(r.value.replace(',', '.')) : null,
+        notes: r.notes || '',
+        source: r.source || 'manual',
+        dateTime: r.date_time || ''
+      }))
+      .sort((a, b) => (a.dateTime || a.date || '').localeCompare(b.dateTime || b.date || ''));
+
+    res.json(activities);
+  } catch (error) {
+    console.error('Error fetching activities:', error);
+    res.status(500).json({ error: 'Failed to fetch activities', details: error.message });
+  }
+});
+
+// Get energy model (TDEE v2) for a patient
+app.get('/api/energy-model/:grupoId', async (req, res) => {
+  if (!sheets) return res.status(503).json({ error: 'Google Sheets not initialized' });
+
+  try {
+    const { grupoId } = req.params;
+
+    // 1) Fetch patient profile from Goals sheet (sex, age, height, PAL)
+    const goalsRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Goals!A1:T50'
+    });
+    const goalsRows = goalsRes.data.values || [];
+    if (goalsRows.length < 2) return res.status(404).json({ error: 'No patient data' });
+
+    const goalsHeaders = goalsRows[0];
+    const goalsData = goalsRows.slice(1).map(r => rowsToObjects(goalsHeaders, [r])[0]);
+    const patient = goalsData.find(p => p.grupo === grupoId && !p.data_final);
+    if (!patient) return res.status(404).json({ error: 'Patient not found or protocol ended' });
+
+    const profile = {
+      sex: (patient.sexo || 'M').toUpperCase(),
+      age: parseInt(patient.idade) || 35,
+      height_cm: parseInt(patient.altura_cm) || 170,
+      PAL0: parseFloat(patient.nivel_atividade === 'moderado' ? '1.6' :
+                        patient.nivel_atividade === 'sedentario' ? '1.4' :
+                        patient.nivel_atividade === 'ativo' ? '1.75' :
+                        patient.nivel_atividade === 'muito_ativo' ? '1.9' : '1.6')
+    };
+
+    // 2) Fetch weight data from Activities sheet
+    const actRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Activities!A1:H500'
+    });
+    const actRows = actRes.data.values || [];
+    const actHeaders = actRows[0] || [];
+    const actData = actRows.slice(1).map(r => rowsToObjects(actHeaders, [r])[0]);
+    const weightRecords = actData
+      .filter(r => r.grupo === grupoId && r.type === 'peso' && r.value)
+      .map(r => ({
+        date: normalizeDate(r.date),
+        weight_kg: parseFloat(String(r.value).replace(',', '.'))
+      }));
+
+    // 3) Fetch food log data (EI_rep) from Reports tab (same spreadsheet)
+    const foodRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Reports!A1:O500'
+    });
+    const foodRows = foodRes.data.values || [];
+    const foodHeaders = foodRows[0] || [];
+    const foodData = foodRows.slice(1).map(r => rowsToObjects(foodHeaders, [r])[0]);
+    const foodRecords = foodData
+      .filter(r => r.grupo === grupoId && r.delete !== 'TRUE')
+      .map(r => ({
+        date: r.date_time ? r.date_time.split('T')[0] : r.data_referencia,
+        EI_rep_kcal: parseFloat(String(r.totalCalories || '0').replace(',', '.'))
+      }))
+      .filter(r => r.EI_rep_kcal > 0);
+
+    // 4) Merge into unified series (all dates)
+    const allDates = new Set([
+      ...weightRecords.map(w => w.date),
+      ...foodRecords.map(f => f.date)
+    ]);
+
+    const weightMap = new Map(weightRecords.map(w => [w.date, w.weight_kg]));
+    const foodMap = new Map(foodRecords.map(f => [f.date, f.EI_rep_kcal]));
+
+    const series = Array.from(allDates).sort().map(date => ({
+      date,
+      weight_kg: weightMap.get(date) || null,
+      EI_rep_kcal: foodMap.get(date) || null
+    }));
+
+    // 5) Return raw data + profile for client-side calculation
+    res.json({
+      profile,
+      series,
+      patient_name: patient.identificacao || grupoId,
+      records: {
+        weights: weightRecords.length,
+        food_logs: foodRecords.length,
+        total_days: allDates.size
+      }
+    });
+  } catch (error) {
+    console.error('Error computing energy model:', error);
+    res.status(500).json({ error: 'Failed to compute energy model', details: error.message });
+  }
+});
+
+// Helper: normalize date DD-MM-YYYY → YYYY-MM-DD
+function normalizeDate(d) {
+  if (!d) return d;
+  if (/^\d{2}-\d{2}-\d{4}$/.test(d)) {
+    const [dd, mm, yyyy] = d.split('-');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return d;
+}
 
 // SPA fallback
 if (existsSync(distPath)) {

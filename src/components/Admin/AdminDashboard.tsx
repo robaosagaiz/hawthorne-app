@@ -3,12 +3,13 @@ import PatientList from './PatientList';
 import RegisterPatient from './RegisterPatient';
 import Dashboard from '../Dashboard/Dashboard';
 import ReportsView from '../Dashboard/ReportsView';
+import ActivitySection from '../Dashboard/ActivitySection';
 import { fetchUserProfile } from '../../services/dataService';
 import { fetchPatientFromApi, checkApiHealth } from '../../services/apiService';
-import { Users, ArrowLeft, BarChart3, FileText } from 'lucide-react';
+import { Users, ArrowLeft, BarChart3, FileText, Activity } from 'lucide-react';
 import GoalsManager from './GoalsManager';
 
-type TabType = 'dashboard' | 'reports';
+type TabType = 'dashboard' | 'activities' | 'reports';
 
 const AdminDashboard: React.FC = () => {
     const [view, setView] = useState<'list' | 'register' | 'details'>('list');
@@ -162,6 +163,17 @@ const AdminDashboard: React.FC = () => {
                                 Dashboard
                             </button>
                             <button
+                                onClick={() => setActiveTab('activities')}
+                                className={`px-6 py-4 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+                                    activeTab === 'activities'
+                                        ? 'border-teal-500 text-teal-600 bg-white'
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                }`}
+                            >
+                                <Activity size={16} />
+                                Atividades
+                            </button>
+                            <button
                                 onClick={() => setActiveTab('reports')}
                                 className={`px-6 py-4 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
                                     activeTab === 'reports'
@@ -178,7 +190,10 @@ const AdminDashboard: React.FC = () => {
                     {/* Tab Content */}
                     <div className="p-6">
                         {activeTab === 'dashboard' && (
-                            <Dashboard key={refreshKey} userId={selectedPatientId} />
+                            <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} />
+                        )}
+                        {activeTab === 'activities' && (
+                            <ActivitySection grupoId={selectedPatientId} />
                         )}
                         {activeTab === 'reports' && (
                             <ReportsView grupoId={selectedPatientId} />

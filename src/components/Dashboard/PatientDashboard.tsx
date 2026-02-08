@@ -7,11 +7,12 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Dashboard from './Dashboard';
 import ReportsView from './ReportsView';
-import { User, Target, Pill, Calendar, Scale, BarChart3, FileText } from 'lucide-react';
+import ActivitySection from './ActivitySection';
+import { User, Target, Pill, Calendar, Scale, BarChart3, FileText, Activity } from 'lucide-react';
 
 const PatientDashboard: React.FC = () => {
     const { userProfile, sheetsPatient } = useAuth();
-    const [activeTab, setActiveTab] = React.useState<'dashboard' | 'reports'>('dashboard');
+    const [activeTab, setActiveTab] = React.useState<'dashboard' | 'activities' | 'reports'>('dashboard');
 
     // Use sheets patient grupo as the ID, or fall back to userProfile uid
     const patientId = sheetsPatient?.grupo || userProfile?.uid;
@@ -145,6 +146,17 @@ const PatientDashboard: React.FC = () => {
                             Meu Progresso
                         </button>
                         <button
+                            onClick={() => setActiveTab('activities')}
+                            className={`px-6 py-4 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
+                                activeTab === 'activities'
+                                    ? 'border-teal-500 text-teal-600 bg-white'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            }`}
+                        >
+                            <Activity size={16} />
+                            Atividades
+                        </button>
+                        <button
                             onClick={() => setActiveTab('reports')}
                             className={`px-6 py-4 text-sm font-medium flex items-center gap-2 border-b-2 transition-colors ${
                                 activeTab === 'reports'
@@ -161,6 +173,9 @@ const PatientDashboard: React.FC = () => {
                 <div className="p-6">
                     {activeTab === 'dashboard' && patientId && (
                         <Dashboard userId={patientId} />
+                    )}
+                    {activeTab === 'activities' && patientId && (
+                        <ActivitySection grupoId={patientId} />
                     )}
                     {activeTab === 'reports' && patientId && (
                         <ReportsView grupoId={patientId} />

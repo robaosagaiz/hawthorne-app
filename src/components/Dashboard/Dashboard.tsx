@@ -6,24 +6,25 @@ import type { DailyLog, UserProfile } from '../../types';
 import StatCard from '../ui/StatCard';
 import EnergyChart from './EnergyChart';
 import MacroChart from './MacroChart';
-import DistributionChart from './DistributionChart';
 import WeightChart from './WeightChart';
 import DailyLogTable from './DailyLogTable';
-import TDEECard from './TDEECard';
+import TDEECardV2 from './TDEECardV2';
 import '../../utils/chartSetup';
 import { Cloud, Database, AlertCircle, TrendingDown, TrendingUp, Scale, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface DashboardProps {
     userId?: string;
+    isAdmin?: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
+const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false }) => {
     const { currentUser } = useAuth();
     const [logs, setLogs] = useState<DailyLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [dataSource, setDataSource] = useState<'api' | 'firestore' | 'none'>('none');
     const [error, setError] = useState<string | null>(null);
     const [showDetailedLog, setShowDetailedLog] = useState(false);
+    const [latestActivityWeight, setLatestActivityWeight] = useState<number | null>(null);
 
     // Priority: Prop userId -> Current Auth UID
     const targetId = userId || currentUser?.uid;
@@ -40,6 +41,73 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
     };
 
     const targets = userProfile?.targets || defaultTargets;
+
+    // Normalize date to YYYY-MM-DD (handles DD-MM-YYYY from Activities)
+    const normalizeDate = (d: string): string => {
+        if (/^\d{2}-\d{2}-\d{4}$/.test(d)) {
+            const [dd, mm, yyyy] = d.split('-');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+        return d; // Already YYYY-MM-DD
+    };
+
+    // Fetch weight records from Activities and merge into daily logs
+    const fetchAndMergeWeights = async (dailyLogs: DailyLog[], grupoId: string): Promise<DailyLog[]> => {
+        try {
+            const API_BASE = import.meta.env.VITE_API_URL || '';
+            const res = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}`);
+            if (!res.ok) return dailyLogs;
+            const activities: Array<{ type: string; date: string; value: number | null }> = await res.json();
+
+            // Get weight records from Activities, build a map of normalized date -> latest weight
+            const weightByDate = new Map<string, number>();
+            let lastWeight: number | null = null;
+            for (const a of activities) {
+                if (a.type === 'peso' && a.value && a.value > 0) {
+                    const normDate = normalizeDate(a.date);
+                    weightByDate.set(normDate, a.value);
+                    lastWeight = a.value;
+                }
+            }
+
+            // Store latest activity weight for the "Peso Atual" stat card
+            setLatestActivityWeight(lastWeight);
+
+            if (weightByDate.size === 0) return dailyLogs;
+
+            // Merge: for each daily log, if Activities has a weight for that date, use it (priority)
+            const merged = dailyLogs.map(log => {
+                const normLogDate = normalizeDate(log.date);
+                const actWeight = weightByDate.get(normLogDate);
+                if (actWeight) {
+                    return { ...log, weight: actWeight };
+                }
+                return log;
+            });
+
+            // Also add weight-only entries for dates that exist in Activities but not in daily logs
+            const existingDates = new Set(dailyLogs.map(l => normalizeDate(l.date)));
+            const weightOnlyEntries: DailyLog[] = [];
+            for (const [date, weight] of weightByDate.entries()) {
+                if (!existingDates.has(date)) {
+                    weightOnlyEntries.push({
+                        id: `activity-${date}`,
+                        date,
+                        energy: 0,
+                        protein: 0,
+                        carbs: 0,
+                        fats: 0,
+                        weight
+                    });
+                }
+            }
+
+            return [...merged, ...weightOnlyEntries].sort((a, b) => a.date.localeCompare(b.date));
+        } catch (err) {
+            console.error('Error fetching activities for weight merge:', err);
+            return dailyLogs;
+        }
+    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -66,10 +134,15 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
                     // Fetch daily logs from API
                     const apiLogs = await fetchDailyLogsFromApi(targetId);
                     if (apiLogs.length > 0) {
-                        setLogs(apiLogs);
+                        // Merge weight data from Activities
+                        const mergedLogs = await fetchAndMergeWeights(apiLogs, targetId);
+                        setLogs(mergedLogs);
                         setDataSource('api');
                         setLoading(false);
                         return;
+                    } else {
+                        // Even without food logs, try to get activity weights (for weight chart + TDEE)
+                        await fetchAndMergeWeights([], targetId);
                     }
                 }
 
@@ -100,24 +173,26 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
         loadData();
     }, [targetId]);
 
-    // Calculate averages
-    const averages = logs.length > 0 ? logs.reduce((acc, curr) => ({
+    // Calculate averages (exclude weight-only entries with zero calories)
+    const foodLogs = logs.filter(l => l.energy > 0);
+    const averages = foodLogs.length > 0 ? foodLogs.reduce((acc, curr) => ({
         energy: acc.energy + curr.energy,
         protein: acc.protein + curr.protein,
         carbs: acc.carbs + curr.carbs,
         fats: acc.fats + curr.fats
     }), { energy: 0, protein: 0, carbs: 0, fats: 0 }) : { energy: 0, protein: 0, carbs: 0, fats: 0 };
 
-    if (logs.length > 0) {
-        averages.energy = Math.round(averages.energy / logs.length);
-        averages.protein = Math.round(averages.protein / logs.length);
-        averages.carbs = Math.round(averages.carbs / logs.length);
-        averages.fats = Math.round(averages.fats / logs.length);
+    if (foodLogs.length > 0) {
+        averages.energy = Math.round(averages.energy / foodLogs.length);
+        averages.protein = Math.round(averages.protein / foodLogs.length);
+        averages.carbs = Math.round(averages.carbs / foodLogs.length);
+        averages.fats = Math.round(averages.fats / foodLogs.length);
     }
 
-    // Weight tracking
+    // Weight tracking — merge food log weights + Activities weights
     const logsWithWeight = logs.filter(l => l.weight && l.weight > 0);
-    const currentWeight = logsWithWeight.length > 0 ? logsWithWeight[logsWithWeight.length - 1].weight : null;
+    // Use latest activity weight if available, otherwise fall back to food log weight
+    const currentWeight = latestActivityWeight || (logsWithWeight.length > 0 ? logsWithWeight[logsWithWeight.length - 1].weight : null);
     const firstWeight = logsWithWeight.length > 0 ? logsWithWeight[0].weight : null;
     const weightChange = (currentWeight && firstWeight) ? currentWeight - firstWeight : null;
     const hasWeightData = logsWithWeight.length >= 2;
@@ -201,33 +276,25 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
             </div>
 
             {/* Charts */}
-            {logs.length > 0 ? (
+            {(foodLogs.length > 0 || hasWeightData) ? (
                 <>
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="bg-white p-6 rounded-xl shadow-sm lg:col-span-2">
-                            <h3 className="text-lg font-bold text-gray-700 mb-4">Consumo de Energia vs. Meta</h3>
-                            <div className="relative h-72">
-                                <EnergyChart data={logs} target={targets.energy} />
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-xl shadow-sm">
-                            <h3 className="text-lg font-bold text-gray-700 mb-4">Distribuição Média</h3>
-                            <div className="relative h-64 flex justify-center">
-                                <DistributionChart averages={averages} />
-                            </div>
-                            <div className="text-center mt-4 text-sm text-gray-500">
-                                Baseado na média de {logs.length} dias.
-                            </div>
+                    {foodLogs.length > 0 && (
+                    <div className="bg-white p-6 rounded-xl shadow-sm">
+                        <h3 className="text-lg font-bold text-gray-700 mb-4">Consumo de Energia vs. Meta</h3>
+                        <div className="relative h-72">
+                            <EnergyChart data={foodLogs} target={targets.energy} />
                         </div>
                     </div>
+                    )}
 
+                    {foodLogs.length > 0 && (
                     <div className="bg-white p-6 rounded-xl shadow-sm">
                         <h3 className="text-lg font-bold text-gray-700 mb-4">Evolução Diária de Macronutrientes</h3>
                         <div className="relative h-80">
-                            <MacroChart data={logs} />
+                            <MacroChart data={foodLogs} />
                         </div>
                     </div>
+                    )}
 
                     {/* Weight Evolution Chart */}
                     {hasWeightData && (
@@ -258,13 +325,17 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
                         </div>
                     )}
 
-                    {/* TDEE Adaptativo Card */}
-                    <TDEECard 
-                        dailyLogs={logs} 
+                    {/* Modelo Energético v2 (Paper Linearizado) */}
+                    {targetId && (
+                    <TDEECardV2
+                        grupoId={targetId}
                         targetCalories={targets.energy}
                         patientGoal="loss"
+                        isAdmin={isAdmin}
                     />
+                    )}
 
+                    {foodLogs.length > 0 && (
                     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
                         <button
                             onClick={() => setShowDetailedLog(!showDetailedLog)}
@@ -272,16 +343,17 @@ const Dashboard: React.FC<DashboardProps> = ({ userId }) => {
                         >
                             <div className="text-left">
                                 <h3 className="text-lg font-bold text-gray-700">Registro Diário Detalhado</h3>
-                                <p className="text-sm text-gray-400 mt-1">{logs.length} registros encontrados</p>
+                                <p className="text-sm text-gray-400 mt-1">{foodLogs.length} registros encontrados</p>
                             </div>
                             <div className={`p-2 rounded-full ${showDetailedLog ? 'bg-teal-100 text-teal-600' : 'bg-gray-100 text-gray-400'} transition-colors`}>
                                 {showDetailedLog ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                             </div>
                         </button>
                         {showDetailedLog && (
-                            <DailyLogTable data={logs} targetEnergy={targets.energy} />
+                            <DailyLogTable data={foodLogs} targetEnergy={targets.energy} />
                         )}
                     </div>
+                    )}
                 </>
             ) : (
                 <div className="bg-white p-12 rounded-xl shadow-sm text-center">

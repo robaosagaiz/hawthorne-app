@@ -103,7 +103,7 @@ const PatientDashboard: React.FC = () => {
       <div className="max-w-lg mx-auto px-4 pt-4">
         {renderView()}
       </div>
-      {!showOnboarding && !showTour && (
+      {!showOnboarding && (
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       )}
     </div>

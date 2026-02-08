@@ -39,6 +39,11 @@ const allSteps: TourStep[] = [
     title: 'Seu gasto energético 📈',
     description: 'Calculamos quanto seu corpo gasta por dia com base nos seus registros de alimentação e peso. Quanto mais preciso, melhor!',
   },
+  {
+    target: '[data-tour="bottom-nav"]',
+    title: 'Navegação do app',
+    description: 'Use as abas para navegar: Hoje (resumo diário), Evolução (gráficos), Atividades (treinos e peso) e Perfil.',
+  },
 ];
 
 interface GuidedTourProps {

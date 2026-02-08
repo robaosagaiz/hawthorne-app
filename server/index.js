@@ -43,6 +43,7 @@ if (existsSync(distPath)) {
 
 // Google Sheets Config
 const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID || '1OBQef2UZpkNWAMBIG2mX1RjoXVIolH1ja0jkE11J8GE';
+const FOODLOG_SPREADSHEET_ID = process.env.FOODLOG_SPREADSHEET_ID || '1JbOJLbY3EOSGUnQgrStELX5MZQ8XZXw0Zld2vajToKo';
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets']; // Read+Write
 
 const CREDENTIAL_PATHS = [
@@ -447,14 +448,29 @@ app.get('/api/reports/:grupoId', async (req, res) => {
 });
 
 // Get daily logs for dashboard
-app.get('/api/daily-logs/:grupoId', async (req, res) => {
+// Helper: normalize DD-MM-YYYY to YYYY-MM-DD
+function normalizeDateStr(d) {
+  if (!d) return null;
+  if (/^\d{2}-\d{2}-\d{4}$/.test(d)) {
+    const [dd, mm, yyyy] = d.split('-');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(d)) {
+    const [dd, mm, yyyy] = d.split('-');
+    return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+  }
+  return d;
+}
+
+// GET /api/food-logs/:grupoId — Individual meal entries (granular, real-time)
+app.get('/api/food-logs/:grupoId', async (req, res) => {
   if (!sheets) return res.status(503).json({ error: 'Google Sheets not initialized' });
 
   try {
     const { grupoId } = req.params;
     const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Reports!A1:O500'
+      spreadsheetId: FOODLOG_SPREADSHEET_ID,
+      range: 'food logs!A1:N2500'
     });
 
     const rows = response.data.values || [];
@@ -463,18 +479,116 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
     const headers = rows[0];
     const dataRows = rows.slice(1);
     const rawData = rowsToObjects(headers, dataRows);
-    
-    const dailyLogs = rawData
-      .filter(r => r.grupo === grupoId && r.delete !== 'TRUE')
+
+    const foodLogs = rawData
+      .filter(r => r.ID === grupoId)
       .map(r => ({
-        id: r.UID || `${r.data_referencia}-${r.grupo}`,
-        date: r.date_time ? r.date_time.split('T')[0] : r.data_referencia,
-        energy: parseFloat(r.totalCalories) || 0,
-        protein: parseFloat(r.totalProtein) || 0,
-        carbs: parseFloat(r.totalCarbs) || 0,
-        fats: parseFloat(r.totalFat) || 0,
-        weight: r.peso ? parseFloat(r.peso.replace(',', '.')) : null
+        id: r.msg_id || `${r.Date}-${r.Time}`,
+        date: normalizeDateStr(r.Date),
+        time: r.Time || null,
+        client: r.Client || null,
+        food: r.Food || null,
+        overview: r.Overview || null,
+        energy: parseFloat(r.Calories) || 0,
+        protein: parseFloat(r.Protein) || 0,
+        carbs: parseFloat(r.Carbs) || 0,
+        fats: parseFloat(r.Fat) || 0,
+        picture: r.Picture || null,
+        fromImage: r.from_image === 'TRUE',
       }))
+      .sort((a, b) => {
+        const dateComp = (a.date || '').localeCompare(b.date || '');
+        if (dateComp !== 0) return dateComp;
+        return (a.time || '').localeCompare(b.time || '');
+      });
+
+    res.json(foodLogs);
+  } catch (error) {
+    console.error('Error fetching food logs:', error);
+    res.status(500).json({ error: 'Failed to fetch food logs', details: error.message });
+  }
+});
+
+// GET /api/daily-logs/:grupoId — Aggregated daily totals (from food logs + Reports fallback)
+app.get('/api/daily-logs/:grupoId', async (req, res) => {
+  if (!sheets) return res.status(503).json({ error: 'Google Sheets not initialized' });
+
+  try {
+    const { grupoId } = req.params;
+
+    // 1. Try food logs first (granular, real-time)
+    let dailyMap = new Map();
+    try {
+      const flResponse = await sheets.spreadsheets.values.get({
+        spreadsheetId: FOODLOG_SPREADSHEET_ID,
+        range: 'food logs!A1:N2500'
+      });
+      const flRows = flResponse.data.values || [];
+      if (flRows.length >= 2) {
+        const headers = flRows[0];
+        const dataRows = flRows.slice(1);
+        const rawData = rowsToObjects(headers, dataRows);
+
+        for (const r of rawData) {
+          if (r.ID !== grupoId) continue;
+          const date = normalizeDateStr(r.Date);
+          if (!date) continue;
+          const energy = parseFloat(r.Calories) || 0;
+          const protein = parseFloat(r.Protein) || 0;
+          const carbs = parseFloat(r.Carbs) || 0;
+          const fats = parseFloat(r.Fat) || 0;
+          if (dailyMap.has(date)) {
+            const existing = dailyMap.get(date);
+            existing.energy += energy;
+            existing.protein += protein;
+            existing.carbs += carbs;
+            existing.fats += fats;
+          } else {
+            dailyMap.set(date, {
+              id: `fl-${date}-${grupoId}`,
+              date,
+              energy,
+              protein,
+              carbs,
+              fats,
+              weight: null,
+            });
+          }
+        }
+      }
+    } catch (flErr) {
+      console.error('Food logs fetch failed, falling back to Reports:', flErr.message);
+    }
+
+    // 2. If no food logs found, fall back to Reports (consolidated)
+    if (dailyMap.size === 0) {
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range: 'Reports!A1:O500'
+      });
+      const rows = response.data.values || [];
+      if (rows.length >= 2) {
+        const headers = rows[0];
+        const dataRows = rows.slice(1);
+        const rawData = rowsToObjects(headers, dataRows);
+        for (const r of rawData) {
+          if (r.grupo !== grupoId || r.delete === 'TRUE') continue;
+          const date = r.date_time ? r.date_time.split('T')[0] : r.data_referencia;
+          if (!date) continue;
+          dailyMap.set(date, {
+            id: r.UID || `${r.data_referencia}-${r.grupo}`,
+            date,
+            energy: parseFloat(r.totalCalories) || 0,
+            protein: parseFloat(r.totalProtein) || 0,
+            carbs: parseFloat(r.totalCarbs) || 0,
+            fats: parseFloat(r.totalFat) || 0,
+            weight: r.peso ? parseFloat(r.peso.replace(',', '.')) : null,
+          });
+        }
+      }
+    }
+
+    const dailyLogs = Array.from(dailyMap.values())
       .sort((a, b) => a.date.localeCompare(b.date));
 
     res.json(dailyLogs);

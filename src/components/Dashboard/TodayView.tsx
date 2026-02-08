@@ -35,6 +35,22 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
     return d;
   };
 
+  interface FoodLogEntry {
+    id: string;
+    date: string;
+    time: string | null;
+    food: string | null;
+    overview: string | null;
+    energy: number;
+    protein: number;
+    carbs: number;
+    fats: number;
+    picture: string | null;
+    fromImage: boolean;
+  }
+
+  const [foodLogEntries, setFoodLogEntries] = useState<FoodLogEntry[]>([]);
+
   const loadData = async (isRefresh = false) => {
     if (!targetId) return;
     if (isRefresh) setRefreshing(true);
@@ -49,8 +65,19 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
 
       const apiLogs = await fetchDailyLogsFromApi(targetId);
 
-      // Fetch weights from Activities
+      // Fetch granular food logs
       const API_BASE = import.meta.env.VITE_API_URL || '';
+      try {
+        const flRes = await fetch(`${API_BASE}/api/food-logs/${encodeURIComponent(targetId)}`);
+        if (flRes.ok) {
+          const entries: FoodLogEntry[] = await flRes.json();
+          setFoodLogEntries(entries);
+        }
+      } catch (e) {
+        console.error('Error fetching food logs:', e);
+      }
+
+      // Fetch weights from Activities
       const actRes = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(targetId)}`);
       if (actRes.ok) {
         const activities: Array<{ type: string; date: string; value: number | null }> = await actRes.json();
@@ -82,28 +109,49 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
   // Today's data — fallback to most recent day if no logs today
   const todayStr = new Date().toISOString().split('T')[0];
   const todayLogs = logs.filter(l => l.date === todayStr && l.energy > 0);
-  const hasLogsToday = todayLogs.length > 0;
+  const todayFoodLogDirect = foodLogEntries.filter(e => e.date === todayStr);
+  const hasLogsToday = todayLogs.length > 0 || todayFoodLogDirect.length > 0;
 
   // If no logs today, show the most recent day's data
   const foodLogs = logs.filter(l => l.energy > 0);
+  const allDates = new Set([
+    ...foodLogs.map(l => l.date),
+    ...foodLogEntries.map(e => e.date).filter(Boolean),
+  ]);
   const displayLogs = hasLogsToday ? todayLogs : (() => {
-    if (foodLogs.length === 0) return [];
-    const sortedByDate = [...foodLogs].sort((a, b) => b.date.localeCompare(a.date));
-    const lastDate = sortedByDate[0].date;
+    if (foodLogs.length === 0 && foodLogEntries.length === 0) return [];
+    const sortedDates = [...allDates].sort((a, b) => b.localeCompare(a));
+    const lastDate = sortedDates[0];
     return foodLogs.filter(l => l.date === lastDate);
   })();
-  const displayDate = displayLogs.length > 0 ? displayLogs[0].date : todayStr;
-  const isShowingPastData = !hasLogsToday && displayLogs.length > 0;
+  const displayDate = hasLogsToday
+    ? todayStr
+    : (foodLogEntries.length > 0
+        ? [...new Set(foodLogEntries.map(e => e.date))].sort((a, b) => b.localeCompare(a))[0] || todayStr
+        : (displayLogs.length > 0 ? displayLogs[0].date : todayStr));
+  const isShowingPastData = !hasLogsToday && (displayLogs.length > 0 || foodLogEntries.length > 0) && displayDate !== todayStr;
 
-  const todayTotals = displayLogs.reduce(
-    (acc, l) => ({
-      energy: acc.energy + l.energy,
-      protein: acc.protein + l.protein,
-      carbs: acc.carbs + l.carbs,
-      fats: acc.fats + l.fats,
-    }),
-    { energy: 0, protein: 0, carbs: 0, fats: 0 }
-  );
+  // Prefer granular food log totals (more accurate, real-time)
+  const displayFoodEntries = foodLogEntries.filter(e => e.date === displayDate);
+  const todayTotals = displayFoodEntries.length > 0
+    ? displayFoodEntries.reduce(
+        (acc, e) => ({
+          energy: acc.energy + e.energy,
+          protein: acc.protein + e.protein,
+          carbs: acc.carbs + e.carbs,
+          fats: acc.fats + e.fats,
+        }),
+        { energy: 0, protein: 0, carbs: 0, fats: 0 }
+      )
+    : displayLogs.reduce(
+        (acc, l) => ({
+          energy: acc.energy + l.energy,
+          protein: acc.protein + l.protein,
+          carbs: acc.carbs + l.carbs,
+          fats: acc.fats + l.fats,
+        }),
+        { energy: 0, protein: 0, carbs: 0, fats: 0 }
+      );
 
   const targets = userProfile?.targets || { energy: 2000, protein: 150, carbs: 200, fats: 60 };
 
@@ -128,11 +176,18 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
 
   const weightDiff = latestWeight && previousWeight ? latestWeight - previousWeight : null;
 
-  // Parse meal items from display logs (each log may be a meal)
-  const mealItems = displayLogs.map((log, i) => ({
-    description: `Refeição ${i + 1} — ${Math.round(log.energy)} kcal (P: ${Math.round(log.protein)}g, C: ${Math.round(log.carbs)}g, G: ${Math.round(log.fats)}g)`,
-    energy: log.energy,
-  }));
+  // Use granular food log entries for meal cards when available
+  const todayFoodEntries = foodLogEntries.filter(e => e.date === displayDate);
+  const mealItems = todayFoodEntries.length > 0
+    ? todayFoodEntries.map(e => ({
+        time: e.time || undefined,
+        description: e.food || e.overview || 'Refeição registrada',
+        energy: e.energy,
+      }))
+    : displayLogs.map((log, i) => ({
+        description: `Refeição ${i + 1} — ${Math.round(log.energy)} kcal (P: ${Math.round(log.protein)}g, C: ${Math.round(log.carbs)}g, G: ${Math.round(log.fats)}g)`,
+        energy: log.energy,
+      }));
 
   if (loading) {
     return (

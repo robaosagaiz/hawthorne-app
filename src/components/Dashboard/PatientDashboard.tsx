@@ -29,6 +29,15 @@ const PatientDashboard: React.FC = () => {
   const patientName = sheetsPatient?.name?.split(' ')[0] || userProfile?.name?.split(' ')[0];
 
   useEffect(() => {
+    // ?reset-tour in URL clears onboarding state for testing
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('reset-tour')) {
+      localStorage.removeItem(ONBOARDING_KEY);
+      localStorage.removeItem(TOUR_KEY);
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
     // Check if user has completed onboarding
     const onboardingDone = localStorage.getItem(ONBOARDING_KEY);
     if (!onboardingDone) {

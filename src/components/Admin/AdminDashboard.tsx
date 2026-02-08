@@ -204,7 +204,7 @@ const AdminDashboard: React.FC = () => {
                 <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} />
               )}
               {activeTab === 'activities' && (
-                <ActivitySection grupoId={selectedPatientId} />
+                <ActivitySection grupoId={selectedPatientId} isAdmin={true} />
               )}
               {activeTab === 'reports' && (
                 <ReportsView grupoId={selectedPatientId} />

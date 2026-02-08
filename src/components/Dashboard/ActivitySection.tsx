@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { cn } from '../../lib/utils';
+import ActivityGoalsEditor from '../Admin/ActivityGoalsEditor';
 
 interface ActivityRecord {
   grupo: string;
@@ -23,8 +24,15 @@ interface ActivityRecord {
   dateTime: string;
 }
 
+interface ActivityTargets {
+  workoutsPerWeek: number;
+  cardioMinutes: number;
+  stepsPerDay: number;
+}
+
 interface ActivitySectionProps {
   grupoId: string;
+  isAdmin?: boolean;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -47,18 +55,33 @@ const formatDateShort = (d: string): string => {
   }
 };
 
-const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
+const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = false }) => {
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAllExercises, setShowAllExercises] = useState(false);
+  const [actTargets, setActTargets] = useState<ActivityTargets>({
+    workoutsPerWeek: 3, cardioMinutes: 30, stepsPerDay: 5000,
+  });
 
   useEffect(() => {
     if (!grupoId) return;
     setLoading(true);
+
+    // Fetch activities
     fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}`)
       .then(res => res.json())
       .then(data => { setActivities(data); setLoading(false); })
       .catch(() => setLoading(false));
+
+    // Fetch patient targets (includes activityTargets)
+    fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.activityTargets) {
+          setActTargets(data.activityTargets);
+        }
+      })
+      .catch(() => {});
   }, [grupoId]);
 
   if (loading) {
@@ -91,7 +114,7 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
   const weekExercises = exerciseRecords.filter(e => parseDate(e.date) >= weekAgo);
   const weekForca = weekExercises.filter(e => e.type === 'forca').length;
   const weekCardio = weekExercises.filter(e => e.type === 'cardio').length;
-  const isActive = weekExercises.length >= 3;
+  const isActive = weekExercises.length >= actTargets.workoutsPerWeek;
 
   // Steps — last 7 days
   const last7Steps = stepsRecords
@@ -102,7 +125,7 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
     : null;
   const latestSteps = stepsRecords.length > 0 ? stepsRecords[stepsRecords.length - 1] : null;
   // Use average steps (7 days) for classification; fallback to latest single record
-  const isSedentary = avgSteps !== null ? avgSteps < 5000 : (latestSteps?.value ? latestSteps.value < 5000 : null);
+  const isSedentary = avgSteps !== null ? avgSteps < actTargets.stepsPerDay : (latestSteps?.value ? latestSteps.value < actTargets.stepsPerDay : null);
 
   // Classification
   const getClassification = () => {
@@ -115,7 +138,7 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
     if (isActive && isSedentary === true) return {
       label: 'Ativo & Sedentário', emoji: '⚡',
       color: 'from-amber-400 to-orange-400', textColor: 'text-white',
-      desc: 'Treinos em dia, mas tente caminhar mais durante o dia (meta: 5.000+ passos).',
+      desc: `Treinos em dia, mas tente caminhar mais durante o dia (meta: ${actTargets.stepsPerDay.toLocaleString('pt-BR')}+ passos).`,
       icon: Zap,
     };
     if (!isActive && isSedentary === false) return {
@@ -169,6 +192,15 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
 
   return (
     <div className="space-y-4 pb-20">
+      {/* Admin: Activity Goals Editor */}
+      {isAdmin && (
+        <ActivityGoalsEditor
+          grupoId={grupoId}
+          currentTargets={actTargets}
+          onSaved={(newTargets) => setActTargets(newTargets)}
+        />
+      )}
+
       {/* Hero Classification Card */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -190,21 +222,21 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
                 <span className="text-xs text-white/90 font-medium">
                   🏋️ {weekExercises.length} treinos/sem
                 </span>
-                <span className="text-[10px] text-white/60 block">meta: 3+</span>
+                <span className="text-[10px] text-white/60 block">meta: {actTargets.workoutsPerWeek}+</span>
               </div>
               {avgSteps !== null ? (
                 <div className="bg-white/20 backdrop-blur rounded-lg px-3 py-1.5">
                   <span className="text-xs text-white/90 font-medium">
                     👟 {avgSteps.toLocaleString('pt-BR')} passos/dia
                   </span>
-                  <span className="text-[10px] text-white/60 block">média 7 dias • meta: 5.000+</span>
+                  <span className="text-[10px] text-white/60 block">média 7 dias • meta: {actTargets.stepsPerDay.toLocaleString('pt-BR')}+</span>
                 </div>
               ) : latestSteps?.value ? (
                 <div className="bg-white/20 backdrop-blur rounded-lg px-3 py-1.5">
                   <span className="text-xs text-white/90 font-medium">
                     👟 {latestSteps.value.toLocaleString('pt-BR')} passos
                   </span>
-                  <span className="text-[10px] text-white/60 block">último registro • meta: 5.000+</span>
+                  <span className="text-[10px] text-white/60 block">último registro • meta: {actTargets.stepsPerDay.toLocaleString('pt-BR')}+</span>
                 </div>
               ) : null}
             </div>
@@ -317,19 +349,19 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
             {/* Weekly progress bar */}
             <div className="mb-3">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] text-slate-500">Meta semanal: 3 treinos</span>
+                <span className="text-[10px] text-slate-500">Meta semanal: {actTargets.workoutsPerWeek} treinos</span>
                 <span className={cn(
                   'text-[10px] font-semibold',
                   isActive ? 'text-emerald-600' : 'text-amber-600'
                 )}>
-                  {weekExercises.length}/3 {isActive ? '✅' : ''}
+                  {weekExercises.length}/{actTargets.workoutsPerWeek} {isActive ? '✅' : ''}
                 </span>
               </div>
               <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                 <motion.div
                   className={cn('h-full rounded-full', isActive ? 'bg-emerald-500' : 'bg-amber-400')}
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.min((weekExercises.length / 3) * 100, 100)}%` }}
+                  animate={{ width: `${Math.min((weekExercises.length / actTargets.workoutsPerWeek) * 100, 100)}%` }}
                   transition={{ duration: 0.8, ease: 'easeOut' }}
                 />
               </div>
@@ -419,7 +451,7 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
                   {last7Steps.map((step, i) => {
                     const val = step.value || 0;
                     const barHeight = Math.max((val / stepsMax) * 100, 4);
-                    const isAboveGoal = val >= 5000;
+                    const isAboveGoal = val >= actTargets.stepsPerDay;
                     return (
                       <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
                         <span className="text-[9px] text-slate-400 tabular-nums mb-1">
@@ -444,7 +476,7 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
                 {/* Goal line label */}
                 <div className="flex items-center gap-2 mt-1">
                   <div className="h-px flex-1 bg-teal-200 border-dashed border-t border-teal-300" />
-                  <span className="text-[10px] text-teal-500 font-medium">Meta: 5.000</span>
+                  <span className="text-[10px] text-teal-500 font-medium">Meta: {actTargets.stepsPerDay.toLocaleString('pt-BR')}</span>
                   <div className="h-px flex-1 bg-teal-200 border-dashed border-t border-teal-300" />
                 </div>
               </>

@@ -108,6 +108,11 @@ function parseGoalRow(row) {
       carbs: parseFloat(row.meta_carboidrato) || 0,
       fats: parseFloat(row.meta_gordura) || 0,
     },
+    activityTargets: {
+      workoutsPerWeek: parseInt(row.meta_treinos_sem) || 3,
+      cardioMinutes: parseInt(row.meta_cardio_min) || 30,
+      stepsPerDay: parseInt(row.meta_passos_dia) || 5000,
+    },
     initialWeight: parseFloat(row.peso_inicial?.replace(',', '.')) || 0,
     finalWeight: parseFloat(row.peso_final?.replace(',', '.')) || 0,
     goal: row.objetivo,
@@ -138,7 +143,7 @@ function formatDate(date) {
 async function getAllGoalRows() {
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: 'Goals!A1:O500'
+    range: 'Goals!A1:W500'
   });
   const rows = response.data.values || [];
   if (rows.length < 2) return { headers: rows[0] || [], goals: [] };
@@ -332,6 +337,58 @@ app.post('/api/patients/:grupoId/goals', async (req, res) => {
   } catch (error) {
     console.error('Error updating goals:', error);
     res.status(500).json({ error: 'Failed to update goals', details: error.message });
+  }
+});
+
+// Update activity targets for a patient
+app.post('/api/patients/:grupoId/activity-targets', async (req, res) => {
+  if (!sheets) return res.status(503).json({ error: 'Google Sheets not initialized' });
+
+  try {
+    const { grupoId } = req.params;
+    const { workoutsPerWeek, cardioMinutes, stepsPerDay } = req.body;
+
+    // Find patient's row in Goals
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Goals!B:B'
+    });
+    const rows = response.data.values || [];
+    let targetRow = -1;
+    // Find the LAST row with this grupo (latest goal)
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (rows[i][0] === grupoId) {
+        targetRow = i + 1; // 1-indexed
+        break;
+      }
+    }
+
+    if (targetRow < 1) return res.status(404).json({ error: 'Patient not found' });
+
+    // Update columns U, V, W on that row
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `Goals!U${targetRow}:W${targetRow}`,
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[
+          String(workoutsPerWeek ?? 3),
+          String(cardioMinutes ?? 30),
+          String(stepsPerDay ?? 5000),
+        ]]
+      }
+    });
+
+    console.log(`✅ Activity targets updated for ${grupoId}: ${workoutsPerWeek} treinos, ${cardioMinutes}min cardio, ${stepsPerDay} passos`);
+
+    res.json({
+      success: true,
+      message: 'Activity targets updated',
+      activityTargets: { workoutsPerWeek, cardioMinutes, stepsPerDay }
+    });
+  } catch (error) {
+    console.error('Error updating activity targets:', error);
+    res.status(500).json({ error: 'Failed to update activity targets', details: error.message });
   }
 });
 
@@ -647,7 +704,7 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
     // 1) Fetch patient profile from Goals sheet (sex, age, height, PAL)
     const goalsRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Goals!A1:T50'
+      range: 'Goals!A1:W50'
     });
     const goalsRows = goalsRes.data.values || [];
     if (goalsRows.length < 2) return res.status(404).json({ error: 'No patient data' });

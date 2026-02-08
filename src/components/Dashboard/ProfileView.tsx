@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { User, Target, Scale, Calendar, LogOut, MessageCircle, Pill } from 'lucide-react';
+import { Target, Scale, Calendar, LogOut, MessageCircle, Pill } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 
 const ProfileView: React.FC = () => {

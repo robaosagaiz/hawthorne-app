@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingDown, TrendingUp, Flame, Target, Scale } from 'lucide-react';
+import { TrendingUp, Flame, Target, Scale } from 'lucide-react';
 import type { DailyLog } from '../../types';
 
 interface PeriodSummaryCardsProps {

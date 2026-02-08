@@ -8,7 +8,7 @@ import ActivitySection from '../Dashboard/ActivitySection';
 import GoalsManager from './GoalsManager';
 import { fetchPatientFromApi, checkApiHealth } from '../../services/apiService';
 import { fetchUserProfile } from '../../services/dataService';
-import { Users, ArrowLeft, BarChart3, FileText, Activity, Settings, AlertCircle, RefreshCw } from 'lucide-react';
+import { Users, ArrowLeft, BarChart3, FileText, Activity, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 // Error Boundary to prevent tab crashes from taking down the whole admin

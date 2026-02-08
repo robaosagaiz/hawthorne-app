@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { fetchPatientsFromApi, checkApiHealth, type Patient } from '../../services/apiService';
+import { fetchPatientsFromApi, checkApiHealth } from '../../services/apiService';
 import { fetchAllPatients } from '../../services/dataService';
 import {
-  Eye, Target, Pill, Search, Plus, RefreshCw,
-  AlertTriangle, Users, Flame, Scale, Clock
+  Pill, Search, Plus, RefreshCw,
+  AlertTriangle, Users, Flame, Clock
 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { cn } from '../../lib/utils';

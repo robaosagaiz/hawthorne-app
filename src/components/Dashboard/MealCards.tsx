@@ -21,7 +21,14 @@ const periodConfig = [
 ];
 
 const classifyMeal = (item: MealItem, index: number, total: number): string => {
-  // If we have a time, use it
+  // First: try to classify by food name keywords
+  const desc = (item.description || '').toLowerCase();
+  if (/café da manhã|café manhã|desjejum|breakfast/.test(desc)) return 'morning';
+  if (/almoço|almoco|lunch/.test(desc)) return 'lunch';
+  if (/lanche|café da tarde|snack/.test(desc)) return 'afternoon';
+  if (/jantar|janta|dinner|ceia/.test(desc)) return 'dinner';
+
+  // Second: try by time
   if (item.time) {
     const hour = parseInt(item.time.split(':')[0], 10);
     if (!isNaN(hour)) {
@@ -30,7 +37,7 @@ const classifyMeal = (item: MealItem, index: number, total: number): string => {
       }
     }
   }
-  // Distribute evenly across periods based on index
+  // Fallback: distribute evenly across periods based on index
   const periodIndex = Math.min(Math.floor((index / Math.max(total, 1)) * 4), 3);
   return periodConfig[periodIndex].key;
 };

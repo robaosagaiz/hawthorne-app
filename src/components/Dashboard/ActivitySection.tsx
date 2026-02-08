@@ -405,25 +405,27 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId }) => {
             {last7Steps.length > 0 ? (
               <>
                 {/* Bar chart */}
-                <div className="flex items-end gap-1.5 h-24 mb-2">
+                <div className="flex items-end gap-1.5 mb-2" style={{ height: 120 }}>
                   {last7Steps.map((step, i) => {
-                    const height = ((step.value || 0) / stepsMax) * 100;
-                    const isAboveGoal = (step.value || 0) >= 5000;
+                    const val = step.value || 0;
+                    const barHeight = Math.max((val / stepsMax) * 100, 4);
+                    const isAboveGoal = val >= 5000;
                     return (
-                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                        <span className="text-[9px] text-slate-400 tabular-nums">
-                          {((step.value || 0) / 1000).toFixed(1)}k
+                      <div key={i} className="flex-1 flex flex-col items-center justify-end h-full">
+                        <span className="text-[9px] text-slate-400 tabular-nums mb-1">
+                          {(val / 1000).toFixed(1)}k
                         </span>
                         <motion.div
                           className={cn(
-                            'w-full rounded-t-lg min-h-[4px]',
+                            'w-full rounded-t-lg',
                             isAboveGoal ? 'bg-teal-400' : 'bg-slate-200'
                           )}
+                          style={{ minHeight: 4 }}
                           initial={{ height: 0 }}
-                          animate={{ height: `${Math.max(height, 4)}%` }}
-                          transition={{ duration: 0.5, delay: i * 0.05 }}
+                          animate={{ height: barHeight }}
+                          transition={{ duration: 0.6, delay: i * 0.08, ease: 'easeOut' }}
                         />
-                        <span className="text-[9px] text-slate-400">{formatDateShort(step.date)}</span>
+                        <span className="text-[9px] text-slate-400 mt-1">{formatDateShort(step.date)}</span>
                       </div>
                     );
                   })}

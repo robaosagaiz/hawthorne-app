@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, Component, type ErrorInfo, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import PatientList from './PatientList';
 import RegisterPatient from './RegisterPatient';
@@ -8,8 +8,48 @@ import ActivitySection from '../Dashboard/ActivitySection';
 import GoalsManager from './GoalsManager';
 import { fetchPatientFromApi, checkApiHealth } from '../../services/apiService';
 import { fetchUserProfile } from '../../services/dataService';
-import { Users, ArrowLeft, BarChart3, FileText, Activity, Settings } from 'lucide-react';
+import { Users, ArrowLeft, BarChart3, FileText, Activity, Settings, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
+
+// Error Boundary to prevent tab crashes from taking down the whole admin
+class TabErrorBoundary extends Component<
+  { children: ReactNode; onReset?: () => void },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: ReactNode; onReset?: () => void }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error('Tab render error:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-white rounded-xl p-8 text-center shadow-sm">
+          <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+          <p className="font-medium text-gray-700 mb-1">Erro ao renderizar</p>
+          <p className="text-sm text-gray-400 mb-4">
+            {this.state.error?.message || 'Erro inesperado'}
+          </p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              this.props.onReset?.();
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 transition-colors"
+          >
+            <RefreshCw size={14} /> Tentar novamente
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 type TabType = 'dashboard' | 'activities' | 'reports';
 
@@ -200,15 +240,17 @@ const AdminDashboard: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === 'dashboard' && (
-                <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} />
-              )}
-              {activeTab === 'activities' && (
-                <ActivitySection grupoId={selectedPatientId} isAdmin={true} />
-              )}
-              {activeTab === 'reports' && (
-                <ReportsView grupoId={selectedPatientId} />
-              )}
+              <TabErrorBoundary key={`${activeTab}-${selectedPatientId}`} onReset={() => setRefreshKey(k => k + 1)}>
+                {activeTab === 'dashboard' && (
+                  <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} />
+                )}
+                {activeTab === 'activities' && (
+                  <ActivitySection grupoId={selectedPatientId} isAdmin={true} />
+                )}
+                {activeTab === 'reports' && (
+                  <ReportsView grupoId={selectedPatientId} />
+                )}
+              </TabErrorBoundary>
             </motion.div>
           </div>
         )}

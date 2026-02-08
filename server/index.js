@@ -84,7 +84,43 @@ async function initGoogleSheets() {
   return false;
 }
 
+// ==================== SHEETS CACHE (60s TTL) ====================
+// Prevents rate-limiting from Google Sheets API when admin views trigger many calls
+
+const _sheetsCache = new Map(); // key → { data, ts }
+const CACHE_TTL_MS = 60_000; // 60 seconds
+
+async function cachedSheetsGet(spreadsheetId, range) {
+  const key = `${spreadsheetId}::${range}`;
+  const cached = _sheetsCache.get(key);
+  if (cached && (Date.now() - cached.ts) < CACHE_TTL_MS) {
+    return cached.data;
+  }
+  const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+  const data = res.data.values || [];
+  _sheetsCache.set(key, { data, ts: Date.now() });
+  return data;
+}
+
+// Invalidate cache for a spreadsheet (call after writes)
+function invalidateCache(spreadsheetId) {
+  for (const key of _sheetsCache.keys()) {
+    if (key.startsWith(spreadsheetId + '::')) {
+      _sheetsCache.delete(key);
+    }
+  }
+}
+
 // ==================== HELPERS ====================
+
+// Standard error response with rate-limit detection
+function sendError(res, error, label = 'Operation failed') {
+  const msg = error?.message || String(error);
+  const isRateLimit = msg.includes('Quota exceeded');
+  const status = isRateLimit ? 429 : 500;
+  console.error(`${label}:`, msg);
+  res.status(status).json({ error: label, details: msg, retryable: isRateLimit });
+}
 
 function rowsToObjects(headers, rows) {
   return rows.map(row => {
@@ -139,13 +175,9 @@ function formatDate(date) {
   return `${d}-${m}-${y}`;
 }
 
-// Get all goal rows from Goals sheet
+// Get all goal rows from Goals sheet (cached)
 async function getAllGoalRows() {
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Goals!A1:W500'
-  });
-  const rows = response.data.values || [];
+  const rows = await cachedSheetsGet(SPREADSHEET_ID, 'Goals!A1:W500');
   if (rows.length < 2) return { headers: rows[0] || [], goals: [] };
   const headers = rows[0];
   const dataRows = rows.slice(1);
@@ -238,7 +270,7 @@ app.get('/api/patients', async (req, res) => {
     res.json(patients);
   } catch (error) {
     console.error('Error fetching patients:', error);
-    res.status(500).json({ error: 'Failed to fetch patients', details: error.message });
+    sendError(res, error, 'Failed to fetch patients');
   }
 });
 
@@ -256,7 +288,7 @@ app.get('/api/patients/:grupoId', async (req, res) => {
     res.json(patient);
   } catch (error) {
     console.error('Error fetching patient:', error);
-    res.status(500).json({ error: 'Failed to fetch patient', details: error.message });
+    sendError(res, error, 'Failed to fetch patient');
   }
 });
 
@@ -273,7 +305,7 @@ app.get('/api/patients/:grupoId/goal-history', async (req, res) => {
     res.json(history);
   } catch (error) {
     console.error('Error fetching goal history:', error);
-    res.status(500).json({ error: 'Failed to fetch goal history', details: error.message });
+    sendError(res, error, 'Failed to fetch goal history');
   }
 });
 
@@ -326,6 +358,7 @@ app.post('/api/patients/:grupoId/goals', async (req, res) => {
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [newRow] }
     });
+    invalidateCache(SPREADSHEET_ID);
 
     console.log(`✅ Goals updated for ${current.name} (${grupoId}): ${energy}kcal, ${protein}g prot`);
     
@@ -379,6 +412,7 @@ app.post('/api/patients/:grupoId/activity-targets', async (req, res) => {
       }
     });
 
+    invalidateCache(SPREADSHEET_ID);
     console.log(`✅ Activity targets updated for ${grupoId}: ${workoutsPerWeek} treinos, ${cardioMinutes}min cardio, ${stepsPerDay} passos`);
 
     res.json({
@@ -457,6 +491,7 @@ app.post('/api/patients/:grupoId/new-protocol', async (req, res) => {
       requestBody: { values: [newRow] }
     });
 
+    invalidateCache(SPREADSHEET_ID);
     console.log(`✅ New protocol started for ${current.name} (${grupoId})`);
     
     res.json({ 
@@ -481,12 +516,7 @@ app.get('/api/reports/:grupoId', async (req, res) => {
 
   try {
     const { grupoId } = req.params;
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Reports!A1:O500'
-    });
-
-    const rows = response.data.values || [];
+    const rows = await cachedSheetsGet(SPREADSHEET_ID, 'Reports!A1:O500');
     if (rows.length < 2) return res.json([]);
 
     const headers = rows[0];
@@ -500,7 +530,7 @@ app.get('/api/reports/:grupoId', async (req, res) => {
     res.json(reports);
   } catch (error) {
     console.error('Error fetching reports:', error);
-    res.status(500).json({ error: 'Failed to fetch reports', details: error.message });
+    sendError(res, error, 'Failed to fetch reports');
   }
 });
 
@@ -525,12 +555,7 @@ app.get('/api/food-logs/:grupoId', async (req, res) => {
 
   try {
     const { grupoId } = req.params;
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: FOODLOG_SPREADSHEET_ID,
-      range: 'food logs!A1:N2500'
-    });
-
-    const rows = response.data.values || [];
+    const rows = await cachedSheetsGet(FOODLOG_SPREADSHEET_ID, 'food logs!A1:N2500');
     if (rows.length < 2) return res.json([]);
 
     const headers = rows[0];
@@ -562,7 +587,7 @@ app.get('/api/food-logs/:grupoId', async (req, res) => {
     res.json(foodLogs);
   } catch (error) {
     console.error('Error fetching food logs:', error);
-    res.status(500).json({ error: 'Failed to fetch food logs', details: error.message });
+    sendError(res, error, 'Failed to fetch food logs');
   }
 });
 
@@ -576,11 +601,7 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
     // 1. Try food logs first (granular, real-time)
     let dailyMap = new Map();
     try {
-      const flResponse = await sheets.spreadsheets.values.get({
-        spreadsheetId: FOODLOG_SPREADSHEET_ID,
-        range: 'food logs!A1:N2500'
-      });
-      const flRows = flResponse.data.values || [];
+      const flRows = await cachedSheetsGet(FOODLOG_SPREADSHEET_ID, 'food logs!A1:N2500');
       if (flRows.length >= 2) {
         const headers = flRows[0];
         const dataRows = flRows.slice(1);
@@ -619,11 +640,7 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
 
     // 2. If no food logs found, fall back to Reports (consolidated)
     if (dailyMap.size === 0) {
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: 'Reports!A1:O500'
-      });
-      const rows = response.data.values || [];
+      const rows = await cachedSheetsGet(SPREADSHEET_ID, 'Reports!A1:O500');
       if (rows.length >= 2) {
         const headers = rows[0];
         const dataRows = rows.slice(1);
@@ -651,7 +668,7 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
     res.json(dailyLogs);
   } catch (error) {
     console.error('Error fetching daily logs:', error);
-    res.status(500).json({ error: 'Failed to fetch daily logs', details: error.message });
+    sendError(res, error, 'Failed to fetch daily logs');
   }
 });
 
@@ -661,12 +678,7 @@ app.get('/api/activities/:grupoId', async (req, res) => {
 
   try {
     const { grupoId } = req.params;
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Activities!A1:H500'
-    });
-
-    const rows = response.data.values || [];
+    const rows = await cachedSheetsGet(SPREADSHEET_ID, 'Activities!A1:H500');
     if (rows.length < 2) return res.json([]);
 
     const headers = rows[0];
@@ -690,7 +702,7 @@ app.get('/api/activities/:grupoId', async (req, res) => {
     res.json(activities);
   } catch (error) {
     console.error('Error fetching activities:', error);
-    res.status(500).json({ error: 'Failed to fetch activities', details: error.message });
+    sendError(res, error, 'Failed to fetch activities');
   }
 });
 
@@ -702,11 +714,7 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
     const { grupoId } = req.params;
 
     // 1) Fetch patient profile from Goals sheet (sex, age, height, PAL)
-    const goalsRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Goals!A1:W50'
-    });
-    const goalsRows = goalsRes.data.values || [];
+    const goalsRows = await cachedSheetsGet(SPREADSHEET_ID, 'Goals!A1:W50');
     if (goalsRows.length < 2) return res.status(404).json({ error: 'No patient data' });
 
     const goalsHeaders = goalsRows[0];
@@ -725,11 +733,7 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
     };
 
     // 2) Fetch weight data from Activities sheet
-    const actRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Activities!A1:H500'
-    });
-    const actRows = actRes.data.values || [];
+    const actRows = await cachedSheetsGet(SPREADSHEET_ID, 'Activities!A1:H500');
     const actHeaders = actRows[0] || [];
     const actData = actRows.slice(1).map(r => rowsToObjects(actHeaders, [r])[0]);
     const weightRecords = actData
@@ -740,11 +744,7 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
       }));
 
     // 3) Fetch food log data (EI_rep) from Reports tab (same spreadsheet)
-    const foodRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Reports!A1:O500'
-    });
-    const foodRows = foodRes.data.values || [];
+    const foodRows = await cachedSheetsGet(SPREADSHEET_ID, 'Reports!A1:O500');
     const foodHeaders = foodRows[0] || [];
     const foodData = foodRows.slice(1).map(r => rowsToObjects(foodHeaders, [r])[0]);
     const foodRecords = foodData
@@ -783,7 +783,9 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error computing energy model:', error);
-    res.status(500).json({ error: 'Failed to compute energy model', details: error.message });
+    const isRateLimit = error.message && error.message.includes('Quota exceeded');
+    const status = isRateLimit ? 429 : 500;
+    res.status(status).json({ error: 'Failed to compute energy model', details: error.message, retryable: isRateLimit });
   }
 });
 

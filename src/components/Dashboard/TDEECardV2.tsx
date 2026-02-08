@@ -32,36 +32,57 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
 
   useEffect(() => {
     if (!grupoId) return;
-    setLoading(true);
-    setError(null);
+    let cancelled = false;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    fetch(`${API_BASE}/api/energy-model/${encodeURIComponent(grupoId)}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(data => {
-        const profile: ProfileInput = {
-          sex: data.profile.sex,
-          age: data.profile.age,
-          height_cm: data.profile.height_cm,
-          PAL0: data.profile.PAL0
-        };
-        const series: SeriesPoint[] = data.series.map((s: any) => ({
-          date: s.date,
-          weight_kg: s.weight_kg,
-          EI_rep_kcal: s.EI_rep_kcal
-        }));
-        
-        const modelResult = estimateEnergyMVP(profile, series);
-        setResult(modelResult);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error('Error loading energy model:', err);
-        setError('Erro ao carregar dados');
-        setLoading(false);
-      });
+    const loadModel = (attempt = 1) => {
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
+
+      fetch(`${API_BASE}/api/energy-model/${encodeURIComponent(grupoId)}`)
+        .then(res => {
+          if (res.status === 429 && attempt < 3) {
+            // Rate limited — retry after delay
+            const delay = attempt * 3000;
+            retryTimeout = setTimeout(() => loadModel(attempt + 1), delay);
+            return null;
+          }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then(data => {
+          if (!data || cancelled) return;
+          const profile: ProfileInput = {
+            sex: data.profile.sex,
+            age: data.profile.age,
+            height_cm: data.profile.height_cm,
+            PAL0: data.profile.PAL0
+          };
+          const series: SeriesPoint[] = data.series.map((s: any) => ({
+            date: s.date,
+            weight_kg: s.weight_kg,
+            EI_rep_kcal: s.EI_rep_kcal
+          }));
+          
+          const modelResult = estimateEnergyMVP(profile, series);
+          setResult(modelResult);
+          setLoading(false);
+        })
+        .catch(err => {
+          if (cancelled) return;
+          console.error('Error loading energy model:', err);
+          setError('Erro ao carregar dados');
+          setLoading(false);
+        });
+    };
+
+    loadModel();
+
+    return () => {
+      cancelled = true;
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
   }, [grupoId]);
 
   const latestWindow = useMemo(() => {

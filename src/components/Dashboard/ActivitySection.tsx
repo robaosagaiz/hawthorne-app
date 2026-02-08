@@ -69,8 +69,8 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
 
     // Fetch activities
     fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}`)
-      .then(res => res.json())
-      .then(data => { setActivities(data); setLoading(false); })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => { setActivities(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
 
     // Fetch patient targets (includes activityTargets)

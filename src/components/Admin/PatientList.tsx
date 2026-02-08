@@ -73,32 +73,44 @@ const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) 
   };
 
   const fetchLiveData = async (pts: DisplayPatient[]) => {
-    // Fetch today's calories for each patient from food logs
+    // Fetch daily logs for each patient — use daily-logs (aggregated, 1 call each)
+    // Batch in groups of 3 with delay to avoid rate limits
     const todayStr = new Date().toISOString().split('T')[0];
-    const updates = await Promise.allSettled(
-      pts.map(async (p) => {
-        try {
-          const res = await fetch(`${API_BASE}/api/food-logs/${encodeURIComponent(p.id)}`);
-          if (!res.ok) return { id: p.id, todayCalories: 0, lastLogDate: undefined };
-          const logs: Array<{ date: string; energy: number }> = await res.json();
-          const todayLogs = logs.filter(l => l.date === todayStr);
-          const todayCal = todayLogs.reduce((sum, l) => sum + l.energy, 0);
-          const lastDate = logs.length > 0 ? logs[logs.length - 1].date : undefined;
-          return { id: p.id, todayCalories: Math.round(todayCal), lastLogDate: lastDate };
-        } catch {
-          return { id: p.id, todayCalories: 0, lastLogDate: undefined };
-        }
-      })
-    );
+    const batchSize = 3;
 
-    setPatients(prev => prev.map(p => {
-      const result = updates.find(u => u.status === 'fulfilled' && (u as PromiseFulfilledResult<any>).value.id === p.id);
-      if (result && result.status === 'fulfilled') {
-        const data = result.value;
-        return { ...p, todayCalories: data.todayCalories, lastLogDate: data.lastLogDate };
+    for (let i = 0; i < pts.length; i += batchSize) {
+      const batch = pts.slice(i, i + batchSize);
+      const results = await Promise.allSettled(
+        batch.map(async (p) => {
+          try {
+            const res = await fetch(`${API_BASE}/api/daily-logs/${encodeURIComponent(p.id)}`);
+            if (!res.ok) return { id: p.id, todayCalories: 0, lastLogDate: undefined };
+            const logs: Array<{ date: string; energy: number }> = await res.json();
+            const foodLogs = logs.filter(l => l.energy > 0);
+            const todayLogs = foodLogs.filter(l => l.date === todayStr);
+            const todayCal = todayLogs.reduce((sum, l) => sum + l.energy, 0);
+            const lastDate = foodLogs.length > 0 ? foodLogs[foodLogs.length - 1].date : undefined;
+            return { id: p.id, todayCalories: Math.round(todayCal), lastLogDate: lastDate };
+          } catch {
+            return { id: p.id, todayCalories: 0, lastLogDate: undefined };
+          }
+        })
+      );
+
+      setPatients(prev => prev.map(p => {
+        const result = results.find(u => u.status === 'fulfilled' && (u as PromiseFulfilledResult<any>).value.id === p.id);
+        if (result && result.status === 'fulfilled') {
+          const data = result.value;
+          return { ...p, todayCalories: data.todayCalories, lastLogDate: data.lastLogDate };
+        }
+        return p;
+      }));
+
+      // Delay between batches to respect rate limits
+      if (i + batchSize < pts.length) {
+        await new Promise(r => setTimeout(r, 2000));
       }
-      return p;
-    }));
+    }
   };
 
   useEffect(() => { loadPatients(); }, []);

@@ -55,21 +55,23 @@ const slides: OnboardingSlide[] = [
         </p>
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 space-y-3">
           <div className="flex items-start gap-3">
-            <Camera className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+            <MessageCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
             <p className="text-slate-600 text-sm">
-              <strong>📸 Foto da refeição</strong> — tire uma foto e envie com uma breve descrição
+              <strong>✏️ Texto (preferencial)</strong> — descreva o que comeu com quantidades: <em>"Almoço: 150g arroz, 100g feijão, 200g frango grelhado e salada"</em>
             </p>
           </div>
           <div className="flex items-start gap-3">
-            <MessageCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+            <Camera className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
             <p className="text-slate-600 text-sm">
-              <strong>✏️ Texto</strong> — ou descreva o que comeu: <em>"Almoço: arroz, feijão, frango grelhado e salada"</em>
+              <strong>📸 Foto</strong> — também pode enviar uma foto com legenda descrevendo a refeição
             </p>
           </div>
         </div>
-        <p className="text-slate-500 text-sm text-center">
-          A IA analisa e calcula automaticamente as calorias e macros!
-        </p>
+        <div className="bg-orange-50 rounded-xl p-3">
+          <p className="text-orange-700 text-sm text-center">
+            💡 Quanto mais detalhes (gramas, porções), mais preciso o cálculo!
+          </p>
+        </div>
       </div>
     ),
   },

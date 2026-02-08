@@ -94,7 +94,9 @@ const PatientDashboard: React.FC = () => {
       <div className="max-w-lg mx-auto px-4 pt-4">
         {renderView()}
       </div>
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      {!showOnboarding && !showTour && (
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      )}
     </div>
   );
 };

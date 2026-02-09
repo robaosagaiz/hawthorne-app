@@ -106,49 +106,33 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
     loadData();
   }, [targetId]);
 
-  // Today's data — fallback to most recent day if no logs today
+  // Today's data — show only today, no fallback to past days
   const todayStr = new Date().toISOString().split('T')[0];
   const todayLogs = logs.filter(l => l.date === todayStr && l.energy > 0);
   const todayFoodLogDirect = foodLogEntries.filter(e => e.date === todayStr);
   const hasLogsToday = todayLogs.length > 0 || todayFoodLogDirect.length > 0;
 
-  // If no logs today, show the most recent day's data
-  const foodLogs = logs.filter(l => l.energy > 0);
-  const allDates = new Set([
-    ...foodLogs.map(l => l.date),
-    ...foodLogEntries.map(e => e.date).filter(Boolean),
-  ]);
-  const displayLogs = hasLogsToday ? todayLogs : (() => {
-    if (foodLogs.length === 0 && foodLogEntries.length === 0) return [];
-    const sortedDates = [...allDates].sort((a, b) => b.localeCompare(a));
-    const lastDate = sortedDates[0];
-    return foodLogs.filter(l => l.date === lastDate);
-  })();
-  const displayDate = hasLogsToday
-    ? todayStr
-    : (foodLogEntries.length > 0
-        ? [...new Set(foodLogEntries.map(e => e.date))].sort((a, b) => b.localeCompare(a))[0] || todayStr
-        : (displayLogs.length > 0 ? displayLogs[0].date : todayStr));
-  const isShowingPastData = !hasLogsToday && (displayLogs.length > 0 || foodLogEntries.length > 0) && displayDate !== todayStr;
+  // Only show today's data — no fallback
+  const displayDate = todayStr;
 
   // Prefer granular food log totals (more accurate, real-time)
-  const displayFoodEntries = foodLogEntries.filter(e => e.date === displayDate);
+  const displayFoodEntries = todayFoodLogDirect;
   const todayTotals = displayFoodEntries.length > 0
     ? displayFoodEntries.reduce(
         (acc, e) => ({
-          energy: acc.energy + e.energy,
-          protein: acc.protein + e.protein,
-          carbs: acc.carbs + e.carbs,
-          fats: acc.fats + e.fats,
+          energy: Math.round(acc.energy + e.energy),
+          protein: Math.round(acc.protein + e.protein),
+          carbs: Math.round(acc.carbs + e.carbs),
+          fats: Math.round(acc.fats + e.fats),
         }),
         { energy: 0, protein: 0, carbs: 0, fats: 0 }
       )
-    : displayLogs.reduce(
+    : todayLogs.reduce(
         (acc, l) => ({
-          energy: acc.energy + l.energy,
-          protein: acc.protein + l.protein,
-          carbs: acc.carbs + l.carbs,
-          fats: acc.fats + l.fats,
+          energy: Math.round(acc.energy + l.energy),
+          protein: Math.round(acc.protein + l.protein),
+          carbs: Math.round(acc.carbs + l.carbs),
+          fats: Math.round(acc.fats + l.fats),
         }),
         { energy: 0, protein: 0, carbs: 0, fats: 0 }
       );
@@ -182,11 +166,11 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
     ? todayFoodEntries.map(e => ({
         time: e.time || undefined,
         description: e.food || e.overview || 'Refeição registrada',
-        energy: e.energy,
+        energy: Math.round(e.energy),
       }))
-    : displayLogs.map((log, i) => ({
+    : todayLogs.map((log, i) => ({
         description: `Refeição ${i + 1} — ${Math.round(log.energy)} kcal (P: ${Math.round(log.protein)}g, C: ${Math.round(log.carbs)}g, G: ${Math.round(log.fats)}g)`,
-        energy: log.energy,
+        energy: Math.round(log.energy),
       }));
 
   if (loading) {
@@ -228,19 +212,18 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
         </div>
       </motion.div>
 
-      {/* Past data notice */}
-      {isShowingPastData && (
+      {/* No logs today — encouragement */}
+      {!hasLogsToday && !loading && (
         <motion.div
-          className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 flex items-center gap-2"
+          className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-4 text-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
-          <span className="text-amber-500 text-sm">📋</span>
-          <p className="text-xs text-amber-700">
-            Sem registros hoje — mostrando último dia:{' '}
-            <span className="font-semibold">
-              {new Date(displayDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}
-            </span>
+          <p className="text-sm font-medium text-emerald-700 mb-1">
+            📝 Ainda não há registros hoje
+          </p>
+          <p className="text-xs text-emerald-600">
+            Envie sua primeira refeição no grupo do WhatsApp para começar o acompanhamento de hoje!
           </p>
         </motion.div>
       )}
@@ -328,9 +311,7 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
         transition={{ delay: 0.4 }}
       >
         <h3 className="text-sm font-semibold text-slate-600 mb-2 px-1">
-          {isShowingPastData
-            ? `Refeições de ${new Date(displayDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}`
-            : 'Refeições de Hoje'}
+          Refeições de Hoje
         </h3>
         <MealCards items={mealItems} />
       </motion.div>

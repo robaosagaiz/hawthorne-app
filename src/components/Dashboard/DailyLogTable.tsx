@@ -54,26 +54,26 @@ const DailyLogTable: React.FC<DailyLogTableProps> = ({ data, targetEnergy }) => 
                                 <td className="px-4 sm:px-6 py-4">
                                     <div className="flex items-center gap-1">
                                         <Flame size={14} className="text-orange-400 hidden sm:inline" />
-                                        <span className="font-medium">{log.energy}</span>
+                                        <span className="font-medium">{Math.round(log.energy)}</span>
                                         <span className="text-gray-400 text-xs ml-0.5 hidden sm:inline">kcal</span>
                                     </div>
                                 </td>
                                 <td className="px-4 sm:px-6 py-4">
                                     <div className="flex items-center gap-1">
                                         <Beef size={14} className="text-red-400 hidden sm:inline" />
-                                        <span className="font-medium text-red-600">{log.protein}g</span>
+                                        <span className="font-medium text-red-600">{Math.round(log.protein)}g</span>
                                     </div>
                                 </td>
                                 <td className="px-4 sm:px-6 py-4">
                                     <div className="flex items-center gap-1">
                                         <Wheat size={14} className="text-amber-400 hidden sm:inline" />
-                                        <span className="font-medium text-amber-600">{log.carbs}g</span>
+                                        <span className="font-medium text-amber-600">{Math.round(log.carbs)}g</span>
                                     </div>
                                 </td>
                                 <td className="px-4 sm:px-6 py-4">
                                     <div className="flex items-center gap-1">
                                         <Droplets size={14} className="text-yellow-400 hidden sm:inline" />
-                                        <span className="font-medium text-yellow-600">{log.fats}g</span>
+                                        <span className="font-medium text-yellow-600">{Math.round(log.fats)}g</span>
                                     </div>
                                 </td>
                                 <td className="px-4 sm:px-6 py-4">{statusBadge}</td>

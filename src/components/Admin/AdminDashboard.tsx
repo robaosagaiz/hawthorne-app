@@ -252,10 +252,10 @@ const AdminDashboard: React.FC = () => {
             >
               <TabErrorBoundary key={`${activeTab}-${selectedPatientId}`} onReset={() => setRefreshKey(k => k + 1)}>
                 {activeTab === 'dashboard' && (
-                  <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} protocolSince={selectedPeriod?.since || patientStartDate} protocolUntil={selectedPeriod?.until} />
+                  <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} protocolSince={selectedPeriod !== null ? (selectedPeriod.since !== undefined ? selectedPeriod.since : patientStartDate) : patientStartDate} protocolUntil={selectedPeriod?.until} />
                 )}
                 {activeTab === 'activities' && (
-                  <ActivitySection grupoId={selectedPatientId} isAdmin={true} protocolStartDate={selectedPeriod?.since || patientStartDate} protocolUntilDate={selectedPeriod?.until} />
+                  <ActivitySection grupoId={selectedPatientId} isAdmin={true} protocolStartDate={selectedPeriod !== null ? (selectedPeriod.since !== undefined ? selectedPeriod.since : patientStartDate) : patientStartDate} protocolUntilDate={selectedPeriod?.until} />
                 )}
                 {activeTab === 'reports' && (
                   <ReportsView grupoId={selectedPatientId} />

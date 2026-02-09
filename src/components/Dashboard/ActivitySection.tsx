@@ -70,8 +70,9 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
     setLoading(true);
 
     // Fetch activities (filtered by protocol date range)
+    // protocolStartDate === '' means "all protocols" → send ?since= (empty) to skip filter
     const actParams = new URLSearchParams();
-    if (protocolStartDate) actParams.set('since', protocolStartDate);
+    if (protocolStartDate !== undefined && protocolStartDate !== null) actParams.set('since', protocolStartDate);
     if (protocolUntilDate) actParams.set('until', protocolUntilDate);
     const actQuery = actParams.toString() ? `?${actParams.toString()}` : '';
     fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}${actQuery}`)

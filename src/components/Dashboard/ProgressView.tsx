@@ -50,14 +50,19 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId, protocolSince, prot
         const patient = await fetchPatientFromApi(targetId);
         if (patient) setUserProfile(patientToUserProfile(patient));
 
-        const since = protocolSince || patient?.startDate;
+        // protocolSince === '' means "all protocols" → no date filter
+        // protocolSince === undefined means no selection → use patient's current startDate
+        const since = protocolSince !== undefined && protocolSince !== null
+          ? (protocolSince || undefined)  // '' → undefined (no filter)
+          : patient?.startDate;
         const apiLogs = await fetchDailyLogsFromApi(targetId, since);
 
         // Merge weights from Activities
         const API_BASE = import.meta.env.VITE_API_URL || '';
-        const actSince = protocolSince || patient?.startDate;
         const actParams = new URLSearchParams();
-        if (actSince) actParams.set('since', actSince);
+        // Send ?since= (even empty) when explicitly set, so backend knows to skip default filter
+        if (protocolSince !== undefined && protocolSince !== null) actParams.set('since', protocolSince);
+        else if (patient?.startDate) actParams.set('since', patient.startDate);
         if (protocolUntil) actParams.set('until', protocolUntil);
         const actQuery = actParams.toString() ? `?${actParams.toString()}` : '';
         const actRes = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(targetId)}${actQuery}`);

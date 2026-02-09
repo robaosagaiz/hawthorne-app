@@ -77,7 +77,11 @@ const PatientDashboard: React.FC = () => {
     );
   }
 
-  const periodSince = selectedPeriod?.since || sheetsPatient?.startDate;
+  // selectedPeriod.since === '' means "all protocols" (no date filter)
+  // selectedPeriod.since === undefined means no selection yet → default to current protocol
+  const periodSince = selectedPeriod !== null
+    ? (selectedPeriod.since !== undefined ? selectedPeriod.since : sheetsPatient?.startDate)
+    : sheetsPatient?.startDate;
   const periodUntil = selectedPeriod?.until;
   const showSelector = activeTab === 'progress' || activeTab === 'activities';
 

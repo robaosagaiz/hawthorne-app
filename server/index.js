@@ -768,8 +768,10 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
 
     const goalsHeaders = goalsRows[0];
     const goalsData = goalsRows.slice(1).map(r => rowsToObjects(goalsHeaders, [r])[0]);
-    const patient = goalsData.find(p => p.grupo === grupoId && !p.data_final);
-    if (!patient) return res.status(404).json({ error: 'Patient not found or protocol ended' });
+    // Find current (active) protocol first, fall back to any protocol for this patient
+    const patient = goalsData.find(p => p.grupo === grupoId && !p.data_final)
+                 || goalsData.find(p => p.grupo === grupoId);
+    if (!patient) return res.status(404).json({ error: 'Patient not found' });
 
     const profile = {
       sex: (patient.sexo || 'M').toUpperCase(),
@@ -782,7 +784,12 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
     };
 
     // Protocol start date filter
-    const since = req.query.since || (patient.data_inicio ? normalizeDateStr(patient.data_inicio) : null);
+    // ?since= explicitly passed → use it (even empty string means "no filter" = all data)
+    // ?since= not in query at all → default to current protocol's data_inicio
+    const hasSinceParam = 'since' in req.query;
+    const since = hasSinceParam
+      ? (req.query.since ? (normalizeDateStr(req.query.since) || req.query.since) : null)
+      : (patient.data_inicio ? normalizeDateStr(patient.data_inicio) : null);
     const until = req.query.until ? (normalizeDateStr(req.query.until) || req.query.until) : null;
 
     // 2) Fetch weight data from Activities sheet

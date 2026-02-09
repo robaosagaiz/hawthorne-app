@@ -45,7 +45,8 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
       setError(null);
 
       const qp = new URLSearchParams();
-      if (protocolSince) qp.set('since', protocolSince);
+      // protocolSince === '' means "all protocols" → send ?since= (empty) to skip backend default
+      if (protocolSince !== undefined && protocolSince !== null) qp.set('since', protocolSince);
       if (protocolUntil) qp.set('until', protocolUntil);
       const qStr = qp.toString() ? `?${qp.toString()}` : '';
       fetch(`${API_BASE}/api/energy-model/${encodeURIComponent(grupoId)}${qStr}`)

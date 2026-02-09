@@ -57,7 +57,10 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocol
     const fetchAndMergeWeights = async (dailyLogs: DailyLog[], grupoId: string, protocolStartDate?: string): Promise<DailyLog[]> => {
         try {
             const API_BASE = import.meta.env.VITE_API_URL || '';
-            const sinceParam = protocolStartDate ? `?since=${encodeURIComponent(protocolStartDate)}` : '';
+            // protocolStartDate === '' means "all" → send ?since= (empty) so backend skips default filter
+            const qp = new URLSearchParams();
+            if (protocolStartDate !== undefined && protocolStartDate !== null) qp.set('since', protocolStartDate);
+            const sinceParam = qp.toString() ? `?${qp.toString()}` : '';
             const res = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}${sinceParam}`);
             if (!res.ok) return dailyLogs;
             const activities: Array<{ type: string; date: string; value: number | null }> = await res.json();
@@ -135,18 +138,24 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocol
                     }
                     
                     // Fetch daily logs from API (filtered by protocol date range)
-                    const since = protocolSince || patient?.startDate;
+                    // protocolSince === '' means "all protocols" → no date filter
+                    const since = protocolSince !== undefined && protocolSince !== null
+                        ? (protocolSince || undefined) // '' → undefined (no filter)
+                        : patient?.startDate;
+                    const sinceForActivities = protocolSince !== undefined && protocolSince !== null
+                        ? protocolSince   // pass '' as-is to signal "all" to activities endpoint
+                        : patient?.startDate;
                     const apiLogs = await fetchDailyLogsFromApi(targetId, since, protocolUntil);
                     if (apiLogs.length > 0) {
                         // Merge weight data from Activities
-                        const mergedLogs = await fetchAndMergeWeights(apiLogs, targetId, protocolSince || patient?.startDate);
+                        const mergedLogs = await fetchAndMergeWeights(apiLogs, targetId, sinceForActivities);
                         setLogs(mergedLogs);
                         setDataSource('api');
                         setLoading(false);
                         return;
                     } else {
                         // Even without food logs, try to get activity weights (for weight chart + TDEE)
-                        await fetchAndMergeWeights([], targetId, protocolSince || patient?.startDate);
+                        await fetchAndMergeWeights([], targetId, sinceForActivities);
                     }
                 }
 
@@ -175,7 +184,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocol
         };
 
         loadData();
-    }, [targetId]);
+    }, [targetId, protocolSince, protocolUntil]);
 
     // Calculate averages (exclude weight-only entries with zero calories)
     const foodLogs = logs.filter(l => l.energy > 0);

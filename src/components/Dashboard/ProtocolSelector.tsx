@@ -49,11 +49,11 @@ const ProtocolSelector: React.FC<ProtocolSelectorProps> = ({ grupoId, onPeriodCh
         });
       });
 
-      // Add "Todos os dados" option
+      // Add "Todos os dados" option — since='' signals backend to skip date filtering
       if (history.length > 1) {
         periods.push({
           label: 'Todos os protocolos',
-          since: undefined,
+          since: '',
           until: undefined,
           isCurrent: false,
         });

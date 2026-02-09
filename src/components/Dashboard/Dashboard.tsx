@@ -155,11 +155,21 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocol
                         return;
                     } else {
                         // Even without food logs, try to get activity weights (for weight chart + TDEE)
-                        await fetchAndMergeWeights([], targetId, sinceForActivities);
+                        const weightLogs = await fetchAndMergeWeights([], targetId, sinceForActivities);
+                        if (weightLogs.length > 0) {
+                            setLogs(weightLogs);
+                            setDataSource('api');
+                            setLoading(false);
+                            return;
+                        }
+                        // API available but no data for this period — don't fall through to unfiltered Firestore
+                        setDataSource('none');
+                        setLoading(false);
+                        return;
                     }
                 }
 
-                // Fallback to Firestore
+                // Fallback to Firestore (only when API is unavailable)
                 const profile = await fetchUserProfile(targetId);
                 if (profile) {
                     setUserProfile(profile);

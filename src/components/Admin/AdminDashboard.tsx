@@ -69,6 +69,8 @@ const AdminDashboard: React.FC = () => {
   const handleSelectPatient = async (uid: string) => {
     setSelectedPatientId(uid);
     setActiveTab('dashboard');
+    setSelectedPeriod(null); // Reset protocol selection when switching patients
+    setPatientStartDate(''); // Clear stale startDate from previous patient
     const apiAvailable = await checkApiHealth();
     if (apiAvailable) {
       const patient = await fetchPatientFromApi(uid);
@@ -91,6 +93,8 @@ const AdminDashboard: React.FC = () => {
     setSelectedPatientId(null);
     setPatientName('');
     setPatientGoal('');
+    setPatientStartDate('');
+    setSelectedPeriod(null);
     setView('list');
   };
 
@@ -251,13 +255,13 @@ const AdminDashboard: React.FC = () => {
               transition={{ duration: 0.2 }}
             >
               <TabErrorBoundary key={`${activeTab}-${selectedPatientId}`} onReset={() => setRefreshKey(k => k + 1)}>
-                {activeTab === 'dashboard' && (
-                  <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} protocolSince={selectedPeriod !== null ? (selectedPeriod.since !== undefined ? selectedPeriod.since : patientStartDate) : patientStartDate} protocolUntil={selectedPeriod?.until} />
+                {activeTab === 'dashboard' && patientStartDate && (
+                  <Dashboard key={`${refreshKey}-${patientStartDate}`} userId={selectedPatientId} isAdmin={true} protocolSince={selectedPeriod !== null ? (selectedPeriod.since !== undefined ? selectedPeriod.since : patientStartDate) : patientStartDate} protocolUntil={selectedPeriod?.until} />
                 )}
-                {activeTab === 'activities' && (
+                {activeTab === 'activities' && patientStartDate && (
                   <ActivitySection grupoId={selectedPatientId} isAdmin={true} protocolStartDate={selectedPeriod !== null ? (selectedPeriod.since !== undefined ? selectedPeriod.since : patientStartDate) : patientStartDate} protocolUntilDate={selectedPeriod?.until} />
                 )}
-                {activeTab === 'reports' && (
+                {activeTab === 'reports' && patientStartDate && (
                   <ReportsView grupoId={selectedPatientId} protocolSince={selectedPeriod !== null ? (selectedPeriod.since !== undefined ? selectedPeriod.since : patientStartDate) : patientStartDate} protocolUntil={selectedPeriod?.until} />
                 )}
               </TabErrorBoundary>

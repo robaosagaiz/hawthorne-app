@@ -697,7 +697,13 @@ app.get('/api/activities/:grupoId', async (req, res) => {
         source: r.source || 'manual',
         dateTime: r.date_time || ''
       }))
-      .sort((a, b) => (a.dateTime || a.date || '').localeCompare(b.dateTime || b.date || ''));
+      .sort((a, b) => {
+        // Sort by actual date (date column) first, then by dateTime for same-day entries
+        const dateA = normalizeDateStr(a.date || '');
+        const dateB = normalizeDateStr(b.date || '');
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return (a.dateTime || '').localeCompare(b.dateTime || '');
+      });
 
     res.json(activities);
   } catch (error) {

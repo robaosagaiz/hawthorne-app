@@ -95,7 +95,9 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
   }
 
   // Separate by type
-  const weightRecords = activities.filter(a => a.type === 'peso' && a.value && a.value > 0);
+  const weightRecords = activities
+    .filter(a => a.type === 'peso' && a.value && a.value > 0)
+    .sort((a, b) => normalizeDate(a.date).localeCompare(normalizeDate(b.date)));
   const exerciseRecords = activities.filter(a => a.type === 'forca' || a.type === 'cardio');
   const stepsRecords = activities.filter(a => a.type === 'passos' && a.value && a.value > 0);
 

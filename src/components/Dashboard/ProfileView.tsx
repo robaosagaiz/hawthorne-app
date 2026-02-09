@@ -1,13 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { Target, Scale, Calendar, LogOut, MessageCircle, Pill } from 'lucide-react';
+import { Target, Scale, Calendar, LogOut, MessageCircle, Pill, Bell, BellOff } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
+
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 const ProfileView: React.FC = () => {
   const { userProfile, sheetsPatient } = useAuth();
+  const [notificationsOn, setNotificationsOn] = useState(true);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  // Load notification preference
+  useEffect(() => {
+    if (!sheetsPatient?.grupo) return;
+    fetch(`${API_BASE}/api/patients/${encodeURIComponent(sheetsPatient.grupo)}/notifications`)
+      .then(r => r.json())
+      .then(data => setNotificationsOn(data.enabled !== false))
+      .catch(() => {}); // default to true on error
+  }, [sheetsPatient?.grupo]);
+
+  const toggleNotifications = async () => {
+    if (!sheetsPatient?.grupo || notifLoading) return;
+    setNotifLoading(true);
+    const newValue = !notificationsOn;
+    try {
+      await fetch(`${API_BASE}/api/patients/${encodeURIComponent(sheetsPatient.grupo)}/notifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: newValue }),
+      });
+      setNotificationsOn(newValue);
+    } catch (e) {
+      console.error('Failed to update notifications:', e);
+    }
+    setNotifLoading(false);
+  };
   const handleLogout = () => signOut(auth);
 
   if (!userProfile) {
@@ -145,6 +175,30 @@ const ProfileView: React.FC = () => {
             <p className="text-xs text-slate-400">WhatsApp Dr. Chamon</p>
           </div>
         </a>
+
+        {/* Notification Toggle */}
+        <button
+          onClick={toggleNotifications}
+          disabled={notifLoading}
+          className="w-full flex items-center gap-3 bg-white rounded-2xl p-4 border border-slate-100 shadow-sm hover:bg-slate-50 transition-colors"
+        >
+          <div className={`p-2 rounded-xl ${notificationsOn ? 'bg-emerald-50' : 'bg-slate-100'}`}>
+            {notificationsOn
+              ? <Bell className="w-5 h-5 text-emerald-500" />
+              : <BellOff className="w-5 h-5 text-slate-400" />
+            }
+          </div>
+          <div className="flex-1 text-left">
+            <p className="text-sm font-semibold text-slate-700">Lembretes</p>
+            <p className="text-xs text-slate-400">
+              {notificationsOn ? 'Lembretes de registro ativos' : 'Lembretes desativados'}
+            </p>
+          </div>
+          {/* Toggle switch visual */}
+          <div className={`w-11 h-6 rounded-full p-0.5 transition-colors ${notificationsOn ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+            <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${notificationsOn ? 'translate-x-5' : 'translate-x-0'}`} />
+          </div>
+        </button>
 
         <button
           onClick={handleLogout}

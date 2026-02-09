@@ -177,7 +177,7 @@ function formatDate(date) {
 
 // Get all goal rows from Goals sheet (cached)
 async function getAllGoalRows() {
-  const rows = await cachedSheetsGet(SPREADSHEET_ID, 'Goals!A1:W500');
+  const rows = await cachedSheetsGet(SPREADSHEET_ID, 'Goals!A1:X500');
   if (rows.length < 2) return { headers: rows[0] || [], goals: [] };
   const headers = rows[0];
   const dataRows = rows.slice(1);
@@ -510,6 +510,70 @@ app.post('/api/patients/:grupoId/new-protocol', async (req, res) => {
   }
 });
 
+// Get notification preference for a patient
+app.get('/api/patients/:grupoId/notifications', async (req, res) => {
+  if (!sheets) return res.status(503).json({ error: 'Google Sheets not initialized' });
+  try {
+    const { grupoId } = req.params;
+    const rows = await cachedSheetsGet(SPREADSHEET_ID, 'Goals!A1:X500');
+    if (rows.length < 2) return res.json({ enabled: true });
+    const headers = rows[0];
+    const notifIdx = headers.indexOf('notificacoes');
+    if (notifIdx === -1) return res.json({ enabled: true });
+    // Find the latest (active) row for this patient
+    const dataRows = rows.slice(1);
+    let latestRow = null;
+    for (const row of dataRows) {
+      if (row[1] === grupoId) latestRow = row; // col B = grupo; last match = latest
+    }
+    if (!latestRow) return res.json({ enabled: true });
+    const val = (latestRow[notifIdx] || 'TRUE').toUpperCase();
+    res.json({ enabled: val !== 'FALSE' });
+  } catch (error) {
+    console.error('Error fetching notification pref:', error);
+    res.json({ enabled: true }); // default to true on error
+  }
+});
+
+// Update notification preference for a patient
+app.post('/api/patients/:grupoId/notifications', async (req, res) => {
+  if (!sheets) return res.status(503).json({ error: 'Google Sheets not initialized' });
+  try {
+    const { grupoId } = req.params;
+    const { enabled } = req.body;
+    const rows = await cachedSheetsGet(SPREADSHEET_ID, 'Goals!A1:X500');
+    if (rows.length < 2) return res.status(404).json({ error: 'No data' });
+    const headers = rows[0];
+    const notifIdx = headers.indexOf('notificacoes');
+    if (notifIdx === -1) return res.status(500).json({ error: 'notificacoes column not found' });
+    const notifCol = String.fromCharCode(65 + notifIdx); // X
+    // Find ALL rows for this patient and update them
+    const dataRows = rows.slice(1);
+    const updates = [];
+    dataRows.forEach((row, i) => {
+      if (row[1] === grupoId) {
+        updates.push({
+          range: `Goals!${notifCol}${i + 2}`,
+          values: [[enabled ? 'TRUE' : 'FALSE']]
+        });
+      }
+    });
+    if (updates.length === 0) return res.status(404).json({ error: 'Patient not found' });
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        valueInputOption: 'RAW',
+        data: updates
+      }
+    });
+    invalidateCache();
+    res.json({ success: true, enabled });
+  } catch (error) {
+    console.error('Error updating notification pref:', error);
+    res.status(500).json({ error: 'Failed to update', details: error.message });
+  }
+});
+
 // Get reports for a patient
 app.get('/api/reports/:grupoId', async (req, res) => {
   if (!sheets) return res.status(503).json({ error: 'Google Sheets not initialized' });
@@ -789,7 +853,7 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
     const { grupoId } = req.params;
 
     // 1) Fetch patient profile from Goals sheet (sex, age, height, PAL)
-    const goalsRows = await cachedSheetsGet(SPREADSHEET_ID, 'Goals!A1:W50');
+    const goalsRows = await cachedSheetsGet(SPREADSHEET_ID, 'Goals!A1:X50');
     if (goalsRows.length < 2) return res.status(404).json({ error: 'No patient data' });
 
     const goalsHeaders = goalsRows[0];

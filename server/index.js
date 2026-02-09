@@ -719,6 +719,17 @@ app.get('/api/activities/:grupoId', async (req, res) => {
         return (a.dateTime || '').localeCompare(b.dateTime || '');
       });
 
+    // Filter by protocol start date if ?since= is provided
+    const since = req.query.since;
+    if (since) {
+      const sinceNorm = normalizeDateStr(since) || since;
+      const filtered = activities.filter(a => {
+        const normDate = normalizeDateStr(a.date || '');
+        return normDate && normDate >= sinceNorm;
+      });
+      return res.json(filtered);
+    }
+
     res.json(activities);
   } catch (error) {
     console.error('Error fetching activities:', error);
@@ -752,6 +763,9 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
                         patient.nivel_atividade === 'muito_ativo' ? '1.9' : '1.6')
     };
 
+    // Protocol start date filter
+    const since = req.query.since || (patient.data_inicio ? normalizeDateStr(patient.data_inicio) : null);
+
     // 2) Fetch weight data from Activities sheet
     const actRows = await cachedSheetsGet(SPREADSHEET_ID, 'Activities!A1:H500');
     const actHeaders = actRows[0] || [];
@@ -761,7 +775,8 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
       .map(r => ({
         date: normalizeDate(r.date),
         weight_kg: parseFloat(String(r.value).replace(',', '.'))
-      }));
+      }))
+      .filter(r => !since || (r.date && r.date >= since));
 
     // 3) Fetch food log data (EI_rep) from Reports tab (same spreadsheet)
     const foodRows = await cachedSheetsGet(SPREADSHEET_ID, 'Reports!A1:O500');
@@ -773,7 +788,8 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
         date: r.date_time ? r.date_time.split('T')[0] : r.data_referencia,
         EI_rep_kcal: parseFloat(String(r.totalCalories || '0').replace(',', '.'))
       }))
-      .filter(r => r.EI_rep_kcal > 0);
+      .filter(r => r.EI_rep_kcal > 0)
+      .filter(r => !since || (r.date && r.date >= since));
 
     // 4) Merge into unified series (all dates)
     const allDates = new Set([

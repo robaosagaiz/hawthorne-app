@@ -52,7 +52,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId }) => {
 
         // Merge weights from Activities
         const API_BASE = import.meta.env.VITE_API_URL || '';
-        const actRes = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(targetId)}`);
+        const sinceParam = patient?.startDate ? `?since=${encodeURIComponent(patient.startDate)}` : '';
+        const actRes = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(targetId)}${sinceParam}`);
         let mergedLogs = apiLogs;
         if (actRes.ok) {
           const activities: Array<{ type: string; date: string; value: number | null }> = await actRes.json();

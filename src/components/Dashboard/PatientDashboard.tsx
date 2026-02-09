@@ -79,7 +79,7 @@ const PatientDashboard: React.FC = () => {
       case 'progress':
         return <ProgressView userId={patientId} />;
       case 'activities':
-        return patientId ? <ActivitySection grupoId={patientId} /> : null;
+        return patientId ? <ActivitySection grupoId={patientId} protocolStartDate={sheetsPatient?.startDate} /> : null;
       case 'profile':
         return <ProfileView />;
     }

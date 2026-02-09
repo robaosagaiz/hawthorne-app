@@ -33,6 +33,7 @@ interface ActivityTargets {
 interface ActivitySectionProps {
   grupoId: string;
   isAdmin?: boolean;
+  protocolStartDate?: string;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -55,7 +56,7 @@ const formatDateShort = (d: string): string => {
   }
 };
 
-const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = false }) => {
+const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = false, protocolStartDate }) => {
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAllExercises, setShowAllExercises] = useState(false);
@@ -67,8 +68,9 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
     if (!grupoId) return;
     setLoading(true);
 
-    // Fetch activities
-    fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}`)
+    // Fetch activities (filtered by protocol start date)
+    const sinceParam = protocolStartDate ? `?since=${encodeURIComponent(protocolStartDate)}` : '';
+    fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}${sinceParam}`)
       .then(res => res.ok ? res.json() : [])
       .then(data => { setActivities(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));

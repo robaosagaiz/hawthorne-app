@@ -60,6 +60,7 @@ const AdminDashboard: React.FC = () => {
   const [patientGoal, setPatientGoal] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [patientTargets, setPatientTargets] = useState({ energy: 0, protein: 0, carbs: 0, fats: 0 });
+  const [patientStartDate, setPatientStartDate] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleSelectPatient = async (uid: string) => {
@@ -72,6 +73,7 @@ const AdminDashboard: React.FC = () => {
         setPatientName(patient.name);
         setPatientGoal(patient.goal || '');
         setPatientTargets(patient.targets || { energy: 0, protein: 0, carbs: 0, fats: 0 });
+        setPatientStartDate(patient.startDate || '');
         setView('details');
         return;
       }
@@ -245,7 +247,7 @@ const AdminDashboard: React.FC = () => {
                   <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} />
                 )}
                 {activeTab === 'activities' && (
-                  <ActivitySection grupoId={selectedPatientId} isAdmin={true} />
+                  <ActivitySection grupoId={selectedPatientId} isAdmin={true} protocolStartDate={patientStartDate} />
                 )}
                 {activeTab === 'reports' && (
                   <ReportsView grupoId={selectedPatientId} />

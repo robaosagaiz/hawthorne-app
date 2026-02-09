@@ -52,10 +52,11 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false }) => {
     };
 
     // Fetch weight records from Activities and merge into daily logs
-    const fetchAndMergeWeights = async (dailyLogs: DailyLog[], grupoId: string): Promise<DailyLog[]> => {
+    const fetchAndMergeWeights = async (dailyLogs: DailyLog[], grupoId: string, protocolStartDate?: string): Promise<DailyLog[]> => {
         try {
             const API_BASE = import.meta.env.VITE_API_URL || '';
-            const res = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}`);
+            const sinceParam = protocolStartDate ? `?since=${encodeURIComponent(protocolStartDate)}` : '';
+            const res = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}${sinceParam}`);
             if (!res.ok) return dailyLogs;
             const activities: Array<{ type: string; date: string; value: number | null }> = await res.json();
 
@@ -135,14 +136,14 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false }) => {
                     const apiLogs = await fetchDailyLogsFromApi(targetId, patient?.startDate);
                     if (apiLogs.length > 0) {
                         // Merge weight data from Activities
-                        const mergedLogs = await fetchAndMergeWeights(apiLogs, targetId);
+                        const mergedLogs = await fetchAndMergeWeights(apiLogs, targetId, patient?.startDate);
                         setLogs(mergedLogs);
                         setDataSource('api');
                         setLoading(false);
                         return;
                     } else {
                         // Even without food logs, try to get activity weights (for weight chart + TDEE)
-                        await fetchAndMergeWeights([], targetId);
+                        await fetchAndMergeWeights([], targetId, patient?.startDate);
                     }
                 }
 

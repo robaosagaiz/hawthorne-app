@@ -258,7 +258,7 @@ const AdminDashboard: React.FC = () => {
                   <ActivitySection grupoId={selectedPatientId} isAdmin={true} protocolStartDate={selectedPeriod !== null ? (selectedPeriod.since !== undefined ? selectedPeriod.since : patientStartDate) : patientStartDate} protocolUntilDate={selectedPeriod?.until} />
                 )}
                 {activeTab === 'reports' && (
-                  <ReportsView grupoId={selectedPatientId} />
+                  <ReportsView grupoId={selectedPatientId} protocolSince={selectedPeriod !== null ? (selectedPeriod.since !== undefined ? selectedPeriod.since : patientStartDate) : patientStartDate} protocolUntil={selectedPeriod?.until} />
                 )}
               </TabErrorBoundary>
             </motion.div>

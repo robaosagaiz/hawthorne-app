@@ -522,10 +522,28 @@ app.get('/api/reports/:grupoId', async (req, res) => {
     const headers = rows[0];
     const dataRows = rows.slice(1);
     const rawData = rowsToObjects(headers, dataRows);
-    const reports = rawData
+    let reports = rawData
       .map(parseReport)
       .filter(r => r.grupo === grupoId && !r.deleted)
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+    // Filter by protocol date range if ?since= and/or ?until= provided
+    const since = req.query.since;
+    const until = req.query.until;
+    if (since) {
+      const sinceNorm = normalizeDateStr(since) || since;
+      reports = reports.filter(r => {
+        const d = normalizeDateStr(r.date) || r.date;
+        return d && d >= sinceNorm;
+      });
+    }
+    if (until) {
+      const untilNorm = normalizeDateStr(until) || until;
+      reports = reports.filter(r => {
+        const d = normalizeDateStr(r.date) || r.date;
+        return d && d <= untilNorm;
+      });
+    }
 
     res.json(reports);
   } catch (error) {

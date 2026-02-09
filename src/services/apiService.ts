@@ -97,9 +97,13 @@ export async function fetchDailyLogsFromApi(grupoId: string, since?: string, unt
 }
 
 // Fetch detailed reports for a patient
-export async function fetchReportsFromApi(grupoId: string): Promise<Report[]> {
+export async function fetchReportsFromApi(grupoId: string, since?: string, until?: string): Promise<Report[]> {
   try {
-    const response = await fetch(`${API_BASE}/api/reports/${encodeURIComponent(grupoId)}`);
+    const qp = new URLSearchParams();
+    if (since !== undefined && since !== null) qp.set('since', since);
+    if (until) qp.set('until', until);
+    const params = qp.toString() ? `?${qp.toString()}` : '';
+    const response = await fetch(`${API_BASE}/api/reports/${encodeURIComponent(grupoId)}${params}`);
     if (!response.ok) throw new Error('Failed to fetch reports');
     return await response.json();
   } catch (error) {

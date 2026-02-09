@@ -4,9 +4,11 @@ import { FileText, Calendar, Flame, Beef, Wheat, Droplet, ChevronDown, ChevronUp
 
 interface ReportsViewProps {
     grupoId: string;
+    protocolSince?: string;
+    protocolUntil?: string;
 }
 
-const ReportsView: React.FC<ReportsViewProps> = ({ grupoId }) => {
+const ReportsView: React.FC<ReportsViewProps> = ({ grupoId, protocolSince, protocolUntil }) => {
     const [reports, setReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
     const [expandedReport, setExpandedReport] = useState<string | null>(null);
@@ -14,7 +16,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ grupoId }) => {
     useEffect(() => {
         const loadReports = async () => {
             setLoading(true);
-            const data = await fetchReportsFromApi(grupoId);
+            const data = await fetchReportsFromApi(grupoId, protocolSince, protocolUntil);
             // Sort by date descending (most recent first)
             const sorted = data.sort((a, b) => {
                 const dateA = a.dateTime || a.date;
@@ -25,7 +27,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ grupoId }) => {
             setLoading(false);
         };
         loadReports();
-    }, [grupoId]);
+    }, [grupoId, protocolSince, protocolUntil]);
 
     const toggleExpand = (reportId: string) => {
         setExpandedReport(expandedReport === reportId ? null : reportId);

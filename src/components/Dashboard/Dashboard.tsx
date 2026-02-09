@@ -336,6 +336,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocol
                         targetCalories={targets.energy}
                         patientGoal="loss"
                         isAdmin={isAdmin}
+                        protocolSince={protocolSince}
+                        protocolUntil={protocolUntil}
                     />
                     )}
 

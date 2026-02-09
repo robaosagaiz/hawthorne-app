@@ -783,6 +783,7 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
 
     // Protocol start date filter
     const since = req.query.since || (patient.data_inicio ? normalizeDateStr(patient.data_inicio) : null);
+    const until = req.query.until ? (normalizeDateStr(req.query.until) || req.query.until) : null;
 
     // 2) Fetch weight data from Activities sheet
     const actRows = await cachedSheetsGet(SPREADSHEET_ID, 'Activities!A1:H500');
@@ -794,7 +795,8 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
         date: normalizeDate(r.date),
         weight_kg: parseFloat(String(r.value).replace(',', '.'))
       }))
-      .filter(r => !since || (r.date && r.date >= since));
+      .filter(r => !since || (r.date && r.date >= since))
+      .filter(r => !until || (r.date && r.date <= until));
 
     // 3) Fetch food log data (EI_rep) from Reports tab (same spreadsheet)
     const foodRows = await cachedSheetsGet(SPREADSHEET_ID, 'Reports!A1:O500');
@@ -807,7 +809,8 @@ app.get('/api/energy-model/:grupoId', async (req, res) => {
         EI_rep_kcal: parseFloat(String(r.totalCalories || '0').replace(',', '.'))
       }))
       .filter(r => r.EI_rep_kcal > 0)
-      .filter(r => !since || (r.date && r.date >= since));
+      .filter(r => !since || (r.date && r.date >= since))
+      .filter(r => !until || (r.date && r.date <= until));
 
     // 4) Merge into unified series (all dates)
     const allDates = new Set([

@@ -16,6 +16,8 @@ interface TDEECardV2Props {
   targetCalories?: number;
   patientGoal?: 'loss' | 'gain' | 'maintain';
   isAdmin?: boolean;
+  protocolSince?: string;
+  protocolUntil?: string;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -24,6 +26,8 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
   grupoId,
   targetCalories = 0,
   isAdmin = false,
+  protocolSince,
+  protocolUntil,
 }) => {
   const [result, setResult] = useState<EnergyModelResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +44,11 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
       setLoading(true);
       setError(null);
 
-      fetch(`${API_BASE}/api/energy-model/${encodeURIComponent(grupoId)}`)
+      const qp = new URLSearchParams();
+      if (protocolSince) qp.set('since', protocolSince);
+      if (protocolUntil) qp.set('until', protocolUntil);
+      const qStr = qp.toString() ? `?${qp.toString()}` : '';
+      fetch(`${API_BASE}/api/energy-model/${encodeURIComponent(grupoId)}${qStr}`)
         .then(res => {
           if (res.status === 429 && attempt < 3) {
             // Rate limited — retry after delay
@@ -83,7 +91,7 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
       cancelled = true;
       if (retryTimeout) clearTimeout(retryTimeout);
     };
-  }, [grupoId]);
+  }, [grupoId, protocolSince, protocolUntil]);
 
   const latestWindow = useMemo(() => {
     if (!result || result.window_summary.length === 0) return null;

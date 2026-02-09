@@ -586,9 +586,14 @@ app.get('/api/food-logs/:grupoId', async (req, res) => {
 
     // Filter by protocol start date if ?since= is provided
     const since = req.query.since;
+    const until = req.query.until;
     if (since) {
       const sinceNorm = normalizeDateStr(since) || since;
       foodLogs = foodLogs.filter(l => l.date >= sinceNorm);
+    }
+    if (until) {
+      const untilNorm = normalizeDateStr(until) || until;
+      foodLogs = foodLogs.filter(l => l.date <= untilNorm);
     }
 
     res.json(foodLogs);
@@ -672,11 +677,16 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
     let dailyLogs = Array.from(dailyMap.values())
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    // Filter by protocol start date if ?since= is provided
+    // Filter by protocol date range if ?since= and/or ?until= provided
     const since = req.query.since;
+    const until = req.query.until;
     if (since) {
       const sinceNorm = normalizeDateStr(since) || since;
       dailyLogs = dailyLogs.filter(l => l.date >= sinceNorm);
+    }
+    if (until) {
+      const untilNorm = normalizeDateStr(until) || until;
+      dailyLogs = dailyLogs.filter(l => l.date <= untilNorm);
     }
 
     res.json(dailyLogs);
@@ -719,18 +729,26 @@ app.get('/api/activities/:grupoId', async (req, res) => {
         return (a.dateTime || '').localeCompare(b.dateTime || '');
       });
 
-    // Filter by protocol start date if ?since= is provided
+    // Filter by protocol date range if ?since= and/or ?until= provided
     const since = req.query.since;
+    const until = req.query.until;
+    let result = activities;
     if (since) {
       const sinceNorm = normalizeDateStr(since) || since;
-      const filtered = activities.filter(a => {
+      result = result.filter(a => {
         const normDate = normalizeDateStr(a.date || '');
         return normDate && normDate >= sinceNorm;
       });
-      return res.json(filtered);
+    }
+    if (until) {
+      const untilNorm = normalizeDateStr(until) || until;
+      result = result.filter(a => {
+        const normDate = normalizeDateStr(a.date || '');
+        return normDate && normDate <= untilNorm;
+      });
     }
 
-    res.json(activities);
+    res.json(result);
   } catch (error) {
     console.error('Error fetching activities:', error);
     sendError(res, error, 'Failed to fetch activities');

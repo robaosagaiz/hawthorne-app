@@ -15,9 +15,11 @@ import { Cloud, Database, AlertCircle, TrendingDown, TrendingUp, Scale, ChevronD
 interface DashboardProps {
     userId?: string;
     isAdmin?: boolean;
+    protocolSince?: string;
+    protocolUntil?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false }) => {
+const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocolSince, protocolUntil }) => {
     const { currentUser } = useAuth();
     const [logs, setLogs] = useState<DailyLog[]>([]);
     const [loading, setLoading] = useState(true);
@@ -132,18 +134,19 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false }) => {
                         setUserProfile(patientToUserProfile(patient));
                     }
                     
-                    // Fetch daily logs from API (filtered by protocol start date)
-                    const apiLogs = await fetchDailyLogsFromApi(targetId, patient?.startDate);
+                    // Fetch daily logs from API (filtered by protocol date range)
+                    const since = protocolSince || patient?.startDate;
+                    const apiLogs = await fetchDailyLogsFromApi(targetId, since, protocolUntil);
                     if (apiLogs.length > 0) {
                         // Merge weight data from Activities
-                        const mergedLogs = await fetchAndMergeWeights(apiLogs, targetId, patient?.startDate);
+                        const mergedLogs = await fetchAndMergeWeights(apiLogs, targetId, protocolSince || patient?.startDate);
                         setLogs(mergedLogs);
                         setDataSource('api');
                         setLoading(false);
                         return;
                     } else {
                         // Even without food logs, try to get activity weights (for weight chart + TDEE)
-                        await fetchAndMergeWeights([], targetId, patient?.startDate);
+                        await fetchAndMergeWeights([], targetId, protocolSince || patient?.startDate);
                     }
                 }
 

@@ -4,7 +4,7 @@
  * Shows OnboardingScreen on first visit, then GuidedTour
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import BottomNav, { type PatientTab } from './BottomNav';
 import TodayView from './TodayView';
@@ -13,6 +13,7 @@ import ActivitySection from './ActivitySection';
 import ProfileView from './ProfileView';
 import OnboardingScreen from '../Onboarding/OnboardingScreen';
 import GuidedTour from '../Onboarding/GuidedTour';
+import ProtocolSelector, { type ProtocolPeriod } from './ProtocolSelector';
 
 const ONBOARDING_KEY = 'hawthorne_onboarding_done';
 const TOUR_KEY = 'hawthorne_tour_done';
@@ -20,6 +21,10 @@ const TOUR_KEY = 'hawthorne_tour_done';
 const PatientDashboard: React.FC = () => {
   const { userProfile, sheetsPatient } = useAuth();
   const [activeTab, setActiveTab] = React.useState<PatientTab>('today');
+
+  // Protocol period selection
+  const [selectedPeriod, setSelectedPeriod] = useState<ProtocolPeriod | null>(null);
+  const handlePeriodChange = useCallback((period: ProtocolPeriod) => setSelectedPeriod(period), []);
 
   // Onboarding state
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -72,14 +77,18 @@ const PatientDashboard: React.FC = () => {
     );
   }
 
+  const periodSince = selectedPeriod?.since || sheetsPatient?.startDate;
+  const periodUntil = selectedPeriod?.until;
+  const showSelector = activeTab === 'progress' || activeTab === 'activities';
+
   const renderView = () => {
     switch (activeTab) {
       case 'today':
         return <TodayView userId={patientId} />;
       case 'progress':
-        return <ProgressView userId={patientId} />;
+        return <ProgressView userId={patientId} protocolSince={periodSince} protocolUntil={periodUntil} />;
       case 'activities':
-        return patientId ? <ActivitySection grupoId={patientId} protocolStartDate={sheetsPatient?.startDate} /> : null;
+        return patientId ? <ActivitySection grupoId={patientId} protocolStartDate={periodSince} protocolUntilDate={periodUntil} /> : null;
       case 'profile':
         return <ProfileView />;
     }
@@ -101,6 +110,12 @@ const PatientDashboard: React.FC = () => {
       )}
 
       <div className="max-w-lg mx-auto px-4 pt-4">
+        {/* Protocol selector for progress/activities tabs */}
+        {showSelector && patientId && (
+          <div className="mb-3">
+            <ProtocolSelector grupoId={patientId} onPeriodChange={handlePeriodChange} compact />
+          </div>
+        )}
         {renderView()}
       </div>
       {!showOnboarding && (

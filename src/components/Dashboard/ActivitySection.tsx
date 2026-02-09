@@ -34,6 +34,7 @@ interface ActivitySectionProps {
   grupoId: string;
   isAdmin?: boolean;
   protocolStartDate?: string;
+  protocolUntilDate?: string;
 }
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -56,7 +57,7 @@ const formatDateShort = (d: string): string => {
   }
 };
 
-const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = false, protocolStartDate }) => {
+const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = false, protocolStartDate, protocolUntilDate }) => {
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAllExercises, setShowAllExercises] = useState(false);
@@ -68,9 +69,12 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
     if (!grupoId) return;
     setLoading(true);
 
-    // Fetch activities (filtered by protocol start date)
-    const sinceParam = protocolStartDate ? `?since=${encodeURIComponent(protocolStartDate)}` : '';
-    fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}${sinceParam}`)
+    // Fetch activities (filtered by protocol date range)
+    const actParams = new URLSearchParams();
+    if (protocolStartDate) actParams.set('since', protocolStartDate);
+    if (protocolUntilDate) actParams.set('until', protocolUntilDate);
+    const actQuery = actParams.toString() ? `?${actParams.toString()}` : '';
+    fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}${actQuery}`)
       .then(res => res.ok ? res.json() : [])
       .then(data => { setActivities(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
@@ -84,7 +88,7 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
         }
       })
       .catch(() => {});
-  }, [grupoId]);
+  }, [grupoId, protocolStartDate, protocolUntilDate]);
 
   if (loading) {
     return (

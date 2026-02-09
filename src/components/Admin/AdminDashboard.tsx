@@ -1,10 +1,11 @@
-import React, { useState, Component, type ErrorInfo, type ReactNode } from 'react';
+import React, { useState, useCallback, Component, type ErrorInfo, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import PatientList from './PatientList';
 import RegisterPatient from './RegisterPatient';
 import Dashboard from '../Dashboard/Dashboard';
 import ReportsView from '../Dashboard/ReportsView';
 import ActivitySection from '../Dashboard/ActivitySection';
+import ProtocolSelector, { type ProtocolPeriod } from '../Dashboard/ProtocolSelector';
 import GoalsManager from './GoalsManager';
 import { fetchPatientFromApi, checkApiHealth } from '../../services/apiService';
 import { fetchUserProfile } from '../../services/dataService';
@@ -61,6 +62,8 @@ const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [patientTargets, setPatientTargets] = useState({ energy: 0, protein: 0, carbs: 0, fats: 0 });
   const [patientStartDate, setPatientStartDate] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState<ProtocolPeriod | null>(null);
+  const handlePeriodChange = useCallback((period: ProtocolPeriod) => setSelectedPeriod(period), []);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleSelectPatient = async (uid: string) => {
@@ -235,6 +238,11 @@ const AdminDashboard: React.FC = () => {
               })}
             </div>
 
+            {/* Protocol Selector */}
+            <div className="mb-3">
+              <ProtocolSelector grupoId={selectedPatientId} onPeriodChange={handlePeriodChange} />
+            </div>
+
             {/* Tab Content */}
             <motion.div
               key={activeTab}
@@ -244,10 +252,10 @@ const AdminDashboard: React.FC = () => {
             >
               <TabErrorBoundary key={`${activeTab}-${selectedPatientId}`} onReset={() => setRefreshKey(k => k + 1)}>
                 {activeTab === 'dashboard' && (
-                  <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} />
+                  <Dashboard key={refreshKey} userId={selectedPatientId} isAdmin={true} protocolSince={selectedPeriod?.since || patientStartDate} protocolUntil={selectedPeriod?.until} />
                 )}
                 {activeTab === 'activities' && (
-                  <ActivitySection grupoId={selectedPatientId} isAdmin={true} protocolStartDate={patientStartDate} />
+                  <ActivitySection grupoId={selectedPatientId} isAdmin={true} protocolStartDate={selectedPeriod?.since || patientStartDate} protocolUntilDate={selectedPeriod?.until} />
                 )}
                 {activeTab === 'reports' && (
                   <ReportsView grupoId={selectedPatientId} />

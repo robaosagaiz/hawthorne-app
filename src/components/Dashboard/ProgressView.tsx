@@ -17,9 +17,11 @@ type Period = '7d' | '30d' | 'all';
 
 interface ProgressViewProps {
   userId?: string;
+  protocolSince?: string;
+  protocolUntil?: string;
 }
 
-const ProgressView: React.FC<ProgressViewProps> = ({ userId }) => {
+const ProgressView: React.FC<ProgressViewProps> = ({ userId, protocolSince, protocolUntil }) => {
   const { currentUser } = useAuth();
   const targetId = userId || currentUser?.uid;
 
@@ -48,12 +50,17 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId }) => {
         const patient = await fetchPatientFromApi(targetId);
         if (patient) setUserProfile(patientToUserProfile(patient));
 
-        const apiLogs = await fetchDailyLogsFromApi(targetId, patient?.startDate);
+        const since = protocolSince || patient?.startDate;
+        const apiLogs = await fetchDailyLogsFromApi(targetId, since);
 
         // Merge weights from Activities
         const API_BASE = import.meta.env.VITE_API_URL || '';
-        const sinceParam = patient?.startDate ? `?since=${encodeURIComponent(patient.startDate)}` : '';
-        const actRes = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(targetId)}${sinceParam}`);
+        const actSince = protocolSince || patient?.startDate;
+        const actParams = new URLSearchParams();
+        if (actSince) actParams.set('since', actSince);
+        if (protocolUntil) actParams.set('until', protocolUntil);
+        const actQuery = actParams.toString() ? `?${actParams.toString()}` : '';
+        const actRes = await fetch(`${API_BASE}/api/activities/${encodeURIComponent(targetId)}${actQuery}`);
         let mergedLogs = apiLogs;
         if (actRes.ok) {
           const activities: Array<{ type: string; date: string; value: number | null }> = await actRes.json();
@@ -87,7 +94,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId }) => {
       }
     };
     loadData();
-  }, [targetId]);
+  }, [targetId, protocolSince, protocolUntil]);
 
   // Filter by period
   const filterByPeriod = (logs: DailyLog[]): DailyLog[] => {

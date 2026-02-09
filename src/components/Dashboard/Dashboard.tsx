@@ -131,8 +131,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false }) => {
                         setUserProfile(patientToUserProfile(patient));
                     }
                     
-                    // Fetch daily logs from API
-                    const apiLogs = await fetchDailyLogsFromApi(targetId);
+                    // Fetch daily logs from API (filtered by protocol start date)
+                    const apiLogs = await fetchDailyLogsFromApi(targetId, patient?.startDate);
                     if (apiLogs.length > 0) {
                         // Merge weight data from Activities
                         const mergedLogs = await fetchAndMergeWeights(apiLogs, targetId);

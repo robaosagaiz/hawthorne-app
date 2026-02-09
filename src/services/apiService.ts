@@ -81,9 +81,10 @@ export async function fetchPatientFromApi(grupoId: string): Promise<Patient | nu
 }
 
 // Fetch daily logs for a patient (formatted for Dashboard)
-export async function fetchDailyLogsFromApi(grupoId: string): Promise<DailyLog[]> {
+export async function fetchDailyLogsFromApi(grupoId: string, since?: string): Promise<DailyLog[]> {
   try {
-    const response = await fetch(`${API_BASE}/api/daily-logs/${encodeURIComponent(grupoId)}`);
+    const params = since ? `?since=${encodeURIComponent(since)}` : '';
+    const response = await fetch(`${API_BASE}/api/daily-logs/${encodeURIComponent(grupoId)}${params}`);
     if (!response.ok) throw new Error('Failed to fetch daily logs');
     return await response.json();
   } catch (error) {

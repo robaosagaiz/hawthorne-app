@@ -662,8 +662,15 @@ app.get('/api/daily-logs/:grupoId', async (req, res) => {
       }
     }
 
-    const dailyLogs = Array.from(dailyMap.values())
+    let dailyLogs = Array.from(dailyMap.values())
       .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Filter by protocol start date if ?since= is provided
+    const since = req.query.since;
+    if (since) {
+      const sinceNorm = normalizeDateStr(since) || since;
+      dailyLogs = dailyLogs.filter(l => l.date >= sinceNorm);
+    }
 
     res.json(dailyLogs);
   } catch (error) {

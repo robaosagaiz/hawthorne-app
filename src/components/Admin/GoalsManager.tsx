@@ -147,28 +147,28 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ grupoId, patientName, curre
                       <Flame size={14} className="text-orange-500" /> Calorias (kcal)
                     </label>
                     <input type="number" value={energy} onChange={e => setEnergy(Number(e.target.value))} required
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white" />
                   </div>
                   <div>
                     <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
                       <Beef size={14} className="text-red-500" /> Proteína (g)
                     </label>
                     <input type="number" value={protein} onChange={e => setProtein(Number(e.target.value))} required
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white" />
                   </div>
                   <div>
                     <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
                       <Wheat size={14} className="text-amber-500" /> Carboidrato (g)
                     </label>
                     <input type="number" value={carbs} onChange={e => setCarbs(Number(e.target.value))} required
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white" />
                   </div>
                   <div>
                     <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
                       <Droplets size={14} className="text-yellow-500" /> Gordura (g)
                     </label>
                     <input type="number" value={fats} onChange={e => setFats(Number(e.target.value))} required
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white" />
                   </div>
                 </div>
                 <button type="submit" disabled={loading}
@@ -191,7 +191,7 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ grupoId, patientName, curre
                     <Scale size={14} className="text-blue-500" /> Peso Inicial (kg) *
                   </label>
                   <input type="number" step="0.1" value={initialWeight || ''} onChange={e => setInitialWeight(Number(e.target.value))} required placeholder="Ex: 85.5"
-                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white placeholder:text-gray-400" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -200,28 +200,28 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ grupoId, patientName, curre
                       <Flame size={14} className="text-orange-500" /> Calorias (kcal)
                     </label>
                     <input type="number" value={energy} onChange={e => setEnergy(Number(e.target.value))} required
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white" />
                   </div>
                   <div>
                     <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
                       <Beef size={14} className="text-red-500" /> Proteína (g)
                     </label>
                     <input type="number" value={protein} onChange={e => setProtein(Number(e.target.value))} required
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white" />
                   </div>
                   <div>
                     <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
                       <Wheat size={14} className="text-amber-500" /> Carboidrato (g)
                     </label>
                     <input type="number" value={carbs} onChange={e => setCarbs(Number(e.target.value))} required
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white" />
                   </div>
                   <div>
                     <label className="flex items-center gap-1 text-sm font-medium text-gray-700 mb-1">
                       <Droplets size={14} className="text-yellow-500" /> Gordura (g)
                     </label>
                     <input type="number" value={fats} onChange={e => setFats(Number(e.target.value))} required
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white" />
                   </div>
                 </div>
 
@@ -229,7 +229,7 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ grupoId, patientName, curre
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-1 block">Objetivo</label>
                     <select value={goal} onChange={e => setGoal(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none">
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 outline-none text-gray-900 bg-white">
                       <option value="Emagrecimento">Emagrecimento</option>
                       <option value="Manutenção">Manutenção</option>
                       <option value="Ganho de massa">Ganho de massa</option>
@@ -239,7 +239,7 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ grupoId, patientName, curre
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-1 block">Medicação</label>
                     <input type="text" value={medication} onChange={e => setMedication(e.target.value)} placeholder="Ex: Tirzepatida"
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none" />
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none text-gray-900 bg-white placeholder:text-gray-400" />
                   </div>
                 </div>
 
@@ -264,18 +264,18 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ grupoId, patientName, curre
                           <span className={`text-xs font-bold px-2 py-1 rounded ${i === 0 ? 'bg-teal-200 text-teal-800' : 'bg-gray-200 text-gray-600'}`}>
                             {i === 0 ? '● ATUAL' : `Protocolo ${history.length - i}`}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-600">
                             {h.startDate}{h.endDate ? ` → ${h.endDate}` : ' → presente'}
                           </span>
                         </div>
-                        <div className="grid grid-cols-4 gap-2 text-sm">
+                        <div className="grid grid-cols-4 gap-2 text-sm text-gray-800">
                           <div><span className="text-gray-500">Cal:</span> <strong>{h.targets.energy}</strong></div>
                           <div><span className="text-gray-500">Prot:</span> <strong>{h.targets.protein}g</strong></div>
                           <div><span className="text-gray-500">Carb:</span> <strong>{h.targets.carbs}g</strong></div>
                           <div><span className="text-gray-500">Gord:</span> <strong>{h.targets.fats}g</strong></div>
                         </div>
                         {h.initialWeight > 0 && (
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-600 mt-1">
                             Peso inicial: {h.initialWeight}kg {h.goal && `• ${h.goal}`} {h.medication && `• ${h.medication}`}
                           </div>
                         )}

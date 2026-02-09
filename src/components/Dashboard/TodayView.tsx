@@ -64,7 +64,7 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
       const patient = await fetchPatientFromApi(targetId);
       if (patient) setUserProfile(patientToUserProfile(patient));
 
-      const apiLogs = await fetchDailyLogsFromApi(targetId);
+      const apiLogs = await fetchDailyLogsFromApi(targetId, patient?.startDate);
 
       // Fetch granular food logs
       const API_BASE = import.meta.env.VITE_API_URL || '';

@@ -562,7 +562,7 @@ app.get('/api/food-logs/:grupoId', async (req, res) => {
     const dataRows = rows.slice(1);
     const rawData = rowsToObjects(headers, dataRows);
 
-    const foodLogs = rawData
+    let foodLogs = rawData
       .filter(r => r.ID === grupoId)
       .map(r => ({
         id: r.msg_id || `${r.Date}-${r.Time}`,
@@ -583,6 +583,13 @@ app.get('/api/food-logs/:grupoId', async (req, res) => {
         if (dateComp !== 0) return dateComp;
         return (a.time || '').localeCompare(b.time || '');
       });
+
+    // Filter by protocol start date if ?since= is provided
+    const since = req.query.since;
+    if (since) {
+      const sinceNorm = normalizeDateStr(since) || since;
+      foodLogs = foodLogs.filter(l => l.date >= sinceNorm);
+    }
 
     res.json(foodLogs);
   } catch (error) {

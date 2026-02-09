@@ -48,7 +48,7 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId }) => {
         const patient = await fetchPatientFromApi(targetId);
         if (patient) setUserProfile(patientToUserProfile(patient));
 
-        const apiLogs = await fetchDailyLogsFromApi(targetId);
+        const apiLogs = await fetchDailyLogsFromApi(targetId, patient?.startDate);
 
         // Merge weights from Activities
         const API_BASE = import.meta.env.VITE_API_URL || '';

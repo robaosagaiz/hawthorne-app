@@ -528,19 +528,27 @@ app.get('/api/reports/:grupoId', async (req, res) => {
       .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
     // Filter by protocol date range if ?since= and/or ?until= provided
+    // Report dates are DD/MM (no year!) — use dateTime (ISO) for reliable filtering
     const since = req.query.since;
     const until = req.query.until;
+    const getReportDateNorm = (r) => {
+      // Prefer dateTime (full ISO) over date (DD/MM without year)
+      if (r.dateTime) {
+        try { return r.dateTime.split('T')[0]; } catch(e) { /* fall through */ }
+      }
+      return normalizeDateStr(r.date) || r.date;
+    };
     if (since) {
       const sinceNorm = normalizeDateStr(since) || since;
       reports = reports.filter(r => {
-        const d = normalizeDateStr(r.date) || r.date;
+        const d = getReportDateNorm(r);
         return d && d >= sinceNorm;
       });
     }
     if (until) {
       const untilNorm = normalizeDateStr(until) || until;
       reports = reports.filter(r => {
-        const d = normalizeDateStr(r.date) || r.date;
+        const d = getReportDateNorm(r);
         return d && d <= untilNorm;
       });
     }

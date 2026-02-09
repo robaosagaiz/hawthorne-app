@@ -125,6 +125,8 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocol
 
             setLoading(true);
             setError(null);
+            setLogs([]); // Clear previous data to prevent stale display
+            setLatestActivityWeight(null);
 
             try {
                 // Try API first (Google Sheets)

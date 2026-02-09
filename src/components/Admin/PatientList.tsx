@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { fetchPatientsFromApi, checkApiHealth } from '../../services/apiService';
+import { getTodayStr } from '../../utils/dateUtils';
 import { fetchAllPatients } from '../../services/dataService';
 import {
   Pill, Search, Plus, RefreshCw,
@@ -75,7 +76,7 @@ const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) 
   const fetchLiveData = async (pts: DisplayPatient[]) => {
     // Fetch daily logs for each patient — use daily-logs (aggregated, 1 call each)
     // Batch in groups of 3 with delay to avoid rate limits
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getTodayStr();
     const batchSize = 3;
 
     for (let i = 0; i < pts.length; i += batchSize) {
@@ -120,7 +121,7 @@ const PatientList: React.FC<PatientListProps> = ({ onSelectPatient, onAddNew }) 
     p.goal?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayStr();
   const activeToday = patients.filter(p => p.todayCalories && p.todayCalories > 0).length;
 
   if (loading) {

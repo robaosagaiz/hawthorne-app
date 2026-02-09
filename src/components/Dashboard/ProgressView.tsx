@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { fetchDailyLogsFromApi, fetchPatientFromApi, checkApiHealth, patientToUserProfile } from '../../services/apiService';
 import type { DailyLog, UserProfile } from '../../types';
+import { getDaysAgoStr } from '../../utils/dateUtils';
 import { cn } from '../../lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import PeriodSummaryCards from './PeriodSummaryCards';
@@ -90,9 +91,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId }) => {
   // Filter by period
   const filterByPeriod = (logs: DailyLog[]): DailyLog[] => {
     if (period === 'all') return logs;
-    const now = new Date();
     const days = period === '7d' ? 7 : 30;
-    const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const cutoff = getDaysAgoStr(days);
     return logs.filter(l => l.date >= cutoff);
   };
 

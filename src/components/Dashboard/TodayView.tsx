@@ -11,6 +11,7 @@ import StreakCounter from './StreakCounter';
 import DailyTip from './DailyTip';
 import TDEECardV2 from './TDEECardV2';
 import { Card, CardContent } from '../ui/card';
+import { getTodayStr, getLocalHour } from '../../utils/dateUtils';
 
 interface TodayViewProps {
   userId?: string;
@@ -107,7 +108,7 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
   }, [targetId]);
 
   // Today's data — show only today, no fallback to past days
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayStr();
   const todayLogs = logs.filter(l => l.date === todayStr && l.energy > 0);
   const todayFoodLogDirect = foodLogEntries.filter(e => e.date === todayStr);
   const hasLogsToday = todayLogs.length > 0 || todayFoodLogDirect.length > 0;
@@ -141,7 +142,7 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
 
   // Greeting based on time
   const getGreeting = () => {
-    const hour = new Date().getHours();
+    const hour = getLocalHour();
     if (hour < 12) return 'Bom dia';
     if (hour < 18) return 'Boa tarde';
     return 'Boa noite';

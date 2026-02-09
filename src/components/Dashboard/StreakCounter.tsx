@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Flame } from 'lucide-react';
 import type { DailyLog } from '../../types';
+import { getTodayStr, getYesterdayStr } from '../../utils/dateUtils';
 
 interface StreakCounterProps {
   logs: DailyLog[];
@@ -18,12 +19,9 @@ const StreakCounter: React.FC<StreakCounterProps> = ({ logs }) => {
     // Sort by date descending
     const sorted = [...foodLogs].sort((a, b) => b.date.localeCompare(a.date));
 
-    // Check if today or yesterday has a log
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    // Check if today or yesterday has a log (timezone-aware)
+    const todayStr = getTodayStr();
+    const yesterdayStr = getYesterdayStr();
 
     const latestDate = sorted[0].date;
     if (latestDate !== todayStr && latestDate !== yesterdayStr) return 0;

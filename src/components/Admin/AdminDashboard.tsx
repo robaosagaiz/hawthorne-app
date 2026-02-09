@@ -7,7 +7,7 @@ import ReportsView from '../Dashboard/ReportsView';
 import ActivitySection from '../Dashboard/ActivitySection';
 import ProtocolSelector, { type ProtocolPeriod } from '../Dashboard/ProtocolSelector';
 import GoalsManager from './GoalsManager';
-import { fetchPatientFromApi, checkApiHealth } from '../../services/apiService';
+import { fetchPatientFromApi, fetchGoalHistory, checkApiHealth } from '../../services/apiService';
 import { fetchUserProfile } from '../../services/dataService';
 import { Users, ArrowLeft, BarChart3, FileText, Activity, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -63,7 +63,25 @@ const AdminDashboard: React.FC = () => {
   const [patientTargets, setPatientTargets] = useState({ energy: 0, protein: 0, carbs: 0, fats: 0 });
   const [patientStartDate, setPatientStartDate] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState<ProtocolPeriod | null>(null);
-  const handlePeriodChange = useCallback((period: ProtocolPeriod) => setSelectedPeriod(period), []);
+  const [goalHistory, setGoalHistory] = useState<Awaited<ReturnType<typeof fetchGoalHistory>>>([]);
+  const handlePeriodChange = useCallback((period: ProtocolPeriod) => {
+    setSelectedPeriod(period);
+    // Update banner targets/goal to match selected protocol
+    if (period.since && goalHistory.length > 0) {
+      const match = goalHistory.find(g => g.startDate === period.since);
+      if (match) {
+        setPatientTargets(match.targets || { energy: 0, protein: 0, carbs: 0, fats: 0 });
+        setPatientGoal(match.goal || '');
+      }
+    } else if (!period.since && goalHistory.length > 0) {
+      // "All protocols" — show latest targets
+      const latest = goalHistory[0];
+      if (latest) {
+        setPatientTargets(latest.targets || { energy: 0, protein: 0, carbs: 0, fats: 0 });
+        setPatientGoal(latest.goal || '');
+      }
+    }
+  }, [goalHistory]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handleSelectPatient = async (uid: string) => {
@@ -71,9 +89,15 @@ const AdminDashboard: React.FC = () => {
     setActiveTab('dashboard');
     setSelectedPeriod(null); // Reset protocol selection when switching patients
     setPatientStartDate(''); // Clear stale startDate from previous patient
+    setGoalHistory([]); // Clear stale goal history
     const apiAvailable = await checkApiHealth();
     if (apiAvailable) {
       const patient = await fetchPatientFromApi(uid);
+      // Load goal history for protocol switching
+      try {
+        const history = await fetchGoalHistory(uid);
+        setGoalHistory(history);
+      } catch (e) { /* ignore */ }
       if (patient) {
         setPatientName(patient.name);
         setPatientGoal(patient.goal || '');

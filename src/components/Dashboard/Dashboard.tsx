@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { fetchDailyLogs, fetchUserProfile } from '../../services/dataService';
-import { fetchDailyLogsFromApi, fetchPatientFromApi, checkApiHealth, patientToUserProfile } from '../../services/apiService';
+import { fetchDailyLogsFromApi, fetchPatientFromApi, fetchGoalHistory, checkApiHealth, patientToUserProfile } from '../../services/apiService';
 import type { DailyLog, UserProfile } from '../../types';
 import StatCard from '../ui/StatCard';
 import EnergyChart from './EnergyChart';
@@ -131,8 +131,20 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocol
                 const apiAvailable = await checkApiHealth();
                 
                 if (apiAvailable) {
-                    // Fetch patient profile from API
-                    const patient = await fetchPatientFromApi(targetId);
+                    // Fetch patient profile — use the correct protocol based on protocolSince
+                    let patient = await fetchPatientFromApi(targetId);
+                    if (patient && protocolSince) {
+                        // If viewing a specific protocol period, find matching goal from history
+                        try {
+                            const history = await fetchGoalHistory(targetId);
+                            const matchingGoal = history.find(h => h.startDate === protocolSince);
+                            if (matchingGoal) {
+                                patient = matchingGoal;
+                            }
+                        } catch (e) {
+                            // Fallback to latest if history fetch fails
+                        }
+                    }
                     if (patient) {
                         setUserProfile(patientToUserProfile(patient));
                     }

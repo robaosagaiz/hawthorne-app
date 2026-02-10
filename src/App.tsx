@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Auth/Login';
 import SignUp from './components/Auth/SignUp';
+import ForgotPassword from './components/Auth/ForgotPassword';
 import PatientDashboard from './components/Dashboard/PatientDashboard';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import Layout from './components/Layout/Layout';
@@ -41,6 +42,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/" element={
         <PrivateRoute>
           <Layout>

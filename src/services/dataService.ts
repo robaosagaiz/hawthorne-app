@@ -1,5 +1,6 @@
 import { collection, query, getDocs, orderBy, doc, getDoc, setDoc, where, type DocumentSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
+import { showError } from '../utils/toast';
 import type { DailyLog, UserProfile } from '../types';
 
 export const fetchDailyLogs = async (userId: string): Promise<DailyLog[]> => {
@@ -27,7 +28,7 @@ export const fetchDailyLogs = async (userId: string): Promise<DailyLog[]> => {
 
         return logs;
     } catch (error) {
-        console.error("Error fetching logs:", error);
+        showError("Erro ao carregar registros", error);
         return [];
     }
 };
@@ -57,7 +58,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
         }
         return null;
     } catch (error) {
-        console.error("Error fetching profile:", error);
+        showError("Erro ao carregar perfil", error);
         return null;
     }
 };
@@ -80,7 +81,7 @@ export const fetchAllPatients = async (): Promise<UserProfile[]> => {
         });
         return patients;
     } catch (error) {
-        console.error("Error fetching patients:", error);
+        showError("Erro ao carregar pacientes", error);
         return [];
     }
 };

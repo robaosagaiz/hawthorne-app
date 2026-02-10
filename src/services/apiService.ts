@@ -4,8 +4,31 @@
  */
 
 import type { DailyLog, UserProfile } from '../types';
+import { auth } from './firebase';
+import { showError } from '../utils/toast';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+// Helper: get auth headers for API calls
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const token = await auth.currentUser?.getIdToken();
+  if (token) {
+    return { 'Authorization': `Bearer ${token}` };
+  }
+  return {};
+}
+
+// Authenticated fetch wrapper
+async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const authHeaders = await getAuthHeaders();
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...authHeaders,
+      ...(options.headers || {}),
+    },
+  });
+}
 
 // Extended types for API data
 export interface Patient {
@@ -59,11 +82,11 @@ export async function checkApiHealth(): Promise<boolean> {
 // Fetch all patients from API
 export async function fetchPatientsFromApi(): Promise<Patient[]> {
   try {
-    const response = await fetch(`${API_BASE}/api/patients`);
+    const response = await authFetch(`${API_BASE}/api/patients`);
     if (!response.ok) throw new Error('Failed to fetch patients');
     return await response.json();
   } catch (error) {
-    console.error('API Error (patients):', error);
+    showError('Erro ao carregar pacientes', error);
     return [];
   }
 }
@@ -71,11 +94,11 @@ export async function fetchPatientsFromApi(): Promise<Patient[]> {
 // Fetch specific patient
 export async function fetchPatientFromApi(grupoId: string): Promise<Patient | null> {
   try {
-    const response = await fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}`);
+    const response = await authFetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}`);
     if (!response.ok) return null;
     return await response.json();
   } catch (error) {
-    console.error('API Error (patient):', error);
+    showError('Erro ao carregar paciente', error);
     return null;
   }
 }
@@ -87,11 +110,11 @@ export async function fetchDailyLogsFromApi(grupoId: string, since?: string, unt
     if (since) qp.set('since', since);
     if (until) qp.set('until', until);
     const params = qp.toString() ? `?${qp.toString()}` : '';
-    const response = await fetch(`${API_BASE}/api/daily-logs/${encodeURIComponent(grupoId)}${params}`);
+    const response = await authFetch(`${API_BASE}/api/daily-logs/${encodeURIComponent(grupoId)}${params}`);
     if (!response.ok) throw new Error('Failed to fetch daily logs');
     return await response.json();
   } catch (error) {
-    console.error('API Error (daily-logs):', error);
+    showError('Erro ao carregar registros diários', error);
     return [];
   }
 }
@@ -103,11 +126,11 @@ export async function fetchReportsFromApi(grupoId: string, since?: string, until
     if (since !== undefined && since !== null) qp.set('since', since);
     if (until) qp.set('until', until);
     const params = qp.toString() ? `?${qp.toString()}` : '';
-    const response = await fetch(`${API_BASE}/api/reports/${encodeURIComponent(grupoId)}${params}`);
+    const response = await authFetch(`${API_BASE}/api/reports/${encodeURIComponent(grupoId)}${params}`);
     if (!response.ok) throw new Error('Failed to fetch reports');
     return await response.json();
   } catch (error) {
-    console.error('API Error (reports):', error);
+    showError('Erro ao carregar relatórios', error);
     return [];
   }
 }
@@ -134,11 +157,11 @@ export function patientToUserProfile(patient: Patient): UserProfile {
 // Fetch goal history for a patient
 export async function fetchGoalHistory(grupoId: string): Promise<Patient[]> {
   try {
-    const response = await fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}/goal-history`);
+    const response = await authFetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}/goal-history`);
     if (!response.ok) throw new Error('Failed to fetch goal history');
     return await response.json();
   } catch (error) {
-    console.error('API Error (goal-history):', error);
+    showError('Erro ao carregar histórico', error);
     return [];
   }
 }
@@ -146,14 +169,14 @@ export async function fetchGoalHistory(grupoId: string): Promise<Patient[]> {
 // Update goals for a patient
 export async function updateGoals(grupoId: string, goals: { energy: number; protein: number; carbs: number; fats: number }): Promise<{ success: boolean; message?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}/goals`, {
+    const response = await authFetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}/goals`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(goals)
     });
     return await response.json();
   } catch (error) {
-    console.error('API Error (update-goals):', error);
+    showError('Erro ao atualizar metas', error);
     return { success: false, message: 'Erro de conexão' };
   }
 }
@@ -164,14 +187,14 @@ export async function startNewProtocol(grupoId: string, data: {
   initialWeight: number; goal?: string; medication?: string;
 }): Promise<{ success: boolean; message?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}/new-protocol`, {
+    const response = await authFetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}/new-protocol`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
     return await response.json();
   } catch (error) {
-    console.error('API Error (new-protocol):', error);
+    showError('Erro ao iniciar protocolo', error);
     return { success: false, message: 'Erro de conexão' };
   }
 }

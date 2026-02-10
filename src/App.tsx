@@ -7,6 +7,8 @@ import ForgotPassword from './components/Auth/ForgotPassword';
 import PatientDashboard from './components/Dashboard/PatientDashboard';
 import AdminDashboard from './components/Admin/AdminDashboard';
 import Layout from './components/Layout/Layout';
+import OfflineBanner from './components/OfflineBanner';
+import { Toaster } from 'sonner';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentUser, loading } = useAuth();
@@ -58,6 +60,8 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
+        <OfflineBanner />
+        <Toaster position="top-right" richColors closeButton />
         <AppRoutes />
       </Router>
     </AuthProvider>

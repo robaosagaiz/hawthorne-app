@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
@@ -9,6 +9,7 @@ const SignUp: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [name, setName] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -34,7 +35,12 @@ const SignUp: React.FC = () => {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // 2. Link data if exists
+            // 2. Set display name
+            if (name.trim()) {
+              await updateProfile(user, { displayName: name.trim() });
+            }
+
+            // 3. Link data if exists
             await linkUserToExistingData(user.uid, user.email!);
 
             navigate('/');
@@ -70,6 +76,16 @@ const SignUp: React.FC = () => {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+                        <input
+                            type="text"
+                            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
+                            placeholder="Seu nome"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                         <input

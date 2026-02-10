@@ -19,6 +19,8 @@ import { google } from 'googleapis';
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import admin from 'firebase-admin';
+import rateLimit from 'express-rate-limit';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,6 +35,77 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// ==================== FIREBASE ADMIN AUTH ====================
+if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  console.log('✅ Firebase Admin initialized from env var');
+} else if (process.env.FIREBASE_PROJECT_ID) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+    projectId: process.env.FIREBASE_PROJECT_ID,
+  });
+  console.log('✅ Firebase Admin initialized with application default credentials');
+} else {
+  // Try local service account file
+  const saPath = join(__dirname, 'firebase-service-account.json');
+  if (existsSync(saPath)) {
+    const serviceAccount = JSON.parse(readFileSync(saPath, 'utf8'));
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    console.log('✅ Firebase Admin initialized from local service account file');
+  } else {
+    console.warn('⚠️ Firebase Admin NOT initialized — auth middleware will reject all requests');
+    // Initialize with no credentials so admin.auth() exists but will fail on verify
+    try { admin.initializeApp(); } catch(e) { /* already initialized or no config */ }
+  }
+}
+
+// Auth middleware — verifies Firebase ID token
+async function verifyFirebaseToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+  }
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    console.error('Auth token verification failed:', err.message);
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+}
+
+// ==================== RATE LIMITING ====================
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
+
+const postLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many write requests, please try again later' },
+});
+
+// Apply rate limiting to all /api routes
+app.use('/api/', apiLimiter);
+
+// Apply auth to all /api routes EXCEPT /api/health
+app.use('/api/', (req, res, next) => {
+  if (req.path === '/health') return next();
+  return verifyFirebaseToken(req, res, next);
+});
+
+// Apply stricter rate limit to POST /api routes
+app.post('/api/*', postLimiter);
 
 // Serve static frontend in production
 const distPath = join(__dirname, '..', 'dist');
@@ -569,7 +642,7 @@ app.post('/api/patients/:grupoId/notifications', async (req, res) => {
         data: updates
       }
     });
-    invalidateCache();
+    invalidateCache(SPREADSHEET_ID);
     res.json({ success: true, enabled });
   } catch (error) {
     console.error('Error updating notification pref:', error);

@@ -61,6 +61,8 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAllExercises, setShowAllExercises] = useState(false);
+  const [patientInitialWeight, setPatientInitialWeight] = useState<number | null>(null);
+  const [patientStartDate, setPatientStartDate] = useState<string | null>(null);
   const [actTargets, setActTargets] = useState<ActivityTargets>({
     workoutsPerWeek: 3, cardioMinutes: 30, stepsPerDay: 5000,
   });
@@ -80,12 +82,18 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
       .then(data => { setActivities(Array.isArray(data) ? data : []); setLoading(false); })
       .catch(() => setLoading(false));
 
-    // Fetch patient targets (includes activityTargets)
+    // Fetch patient targets (includes activityTargets + initialWeight)
     fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data?.activityTargets) {
           setActTargets(data.activityTargets);
+        }
+        if (data?.initialWeight && data.initialWeight > 0) {
+          setPatientInitialWeight(data.initialWeight);
+        }
+        if (data?.startDate) {
+          setPatientStartDate(data.startDate);
         }
       })
       .catch(() => {});
@@ -108,10 +116,10 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
   const exerciseRecords = activities.filter(a => a.type === 'forca' || a.type === 'cardio');
   const stepsRecords = activities.filter(a => a.type === 'passos' && a.value && a.value > 0);
 
-  // Weight stats
+  // Weight stats — use protocol initial weight as baseline
   const latestWeight = weightRecords.length > 0 ? weightRecords[weightRecords.length - 1] : null;
-  const firstWeight = weightRecords.length > 0 ? weightRecords[0] : null;
-  const weightDiff = latestWeight?.value && firstWeight?.value ? latestWeight.value - firstWeight.value : null;
+  const protocolWeight = patientInitialWeight || (weightRecords.length > 0 ? weightRecords[0].value : null);
+  const weightDiff = latestWeight?.value && protocolWeight ? latestWeight.value - protocolWeight : null;
 
   // This week exercises
   const now = new Date();

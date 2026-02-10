@@ -62,7 +62,7 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
   const [loading, setLoading] = useState(true);
   const [showAllExercises, setShowAllExercises] = useState(false);
   const [patientInitialWeight, setPatientInitialWeight] = useState<number | null>(null);
-  const [patientStartDate, setPatientStartDate] = useState<string | null>(null);
+  const [, setPatientStartDate] = useState<string | null>(null);
   const [actTargets, setActTargets] = useState<ActivityTargets>({
     workoutsPerWeek: 3, cardioMinutes: 30, stepsPerDay: 5000,
   });

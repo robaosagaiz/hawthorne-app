@@ -27,6 +27,7 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
   const [previousWeight, setPreviousWeight] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [patientStartDate, setPatientStartDate] = useState<string | undefined>(undefined);
 
   const normalizeDate = (d: string): string => {
     if (/^\d{2}-\d{2}-\d{4}$/.test(d)) {
@@ -62,7 +63,10 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
       if (!apiAvailable) return;
 
       const patient = await fetchPatientFromApi(targetId);
-      if (patient) setUserProfile(patientToUserProfile(patient));
+      if (patient) {
+        setUserProfile(patientToUserProfile(patient));
+        setPatientStartDate(patient.startDate);
+      }
 
       const apiLogs = await fetchDailyLogsFromApi(targetId, patient?.startDate);
 
@@ -301,7 +305,7 @@ const TodayView: React.FC<TodayViewProps> = ({ userId }) => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <TDEECardV2 grupoId={targetId} targetCalories={targets.energy} isAdmin={false} />
+          <TDEECardV2 grupoId={targetId} targetCalories={targets.energy} isAdmin={false} protocolSince={patientStartDate} />
         </motion.div>
       )}
 

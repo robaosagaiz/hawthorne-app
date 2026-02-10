@@ -11,8 +11,15 @@ interface PeriodSummaryCardsProps {
 const PeriodSummaryCards: React.FC<PeriodSummaryCardsProps> = ({ logs, energyTarget }) => {
   const foodLogs = logs.filter(l => l.energy > 0);
 
-  // Weight change
-  const weightsInPeriod = logs.filter(l => l.weight && l.weight > 0).sort((a, b) => a.date.localeCompare(b.date));
+  // Weight change — normalize dates for correct chronological sort
+  const normalizeDate = (d: string): string => {
+    if (/^\d{2}-\d{2}-\d{4}$/.test(d)) {
+      const [dd, mm, yyyy] = d.split('-');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return d;
+  };
+  const weightsInPeriod = logs.filter(l => l.weight && l.weight > 0).sort((a, b) => normalizeDate(a.date).localeCompare(normalizeDate(b.date)));
   const firstWeight = weightsInPeriod.length > 0 ? weightsInPeriod[0].weight! : null;
   const lastWeight = weightsInPeriod.length > 0 ? weightsInPeriod[weightsInPeriod.length - 1].weight! : null;
   const weightChange = firstWeight && lastWeight ? lastWeight - firstWeight : null;

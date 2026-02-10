@@ -123,8 +123,8 @@ function sendError(res, error, label = 'Operation failed') {
 }
 
 function rowsToObjects(headers, rows) {
-  return rows.map(row => {
-    const obj = {};
+  return rows.map((row, idx) => {
+    const obj = { _rowIndex: idx };
     headers.forEach((header, i) => {
       obj[header] = row[i] || '';
     });
@@ -134,6 +134,7 @@ function rowsToObjects(headers, rows) {
 
 function parseGoalRow(row) {
   return {
+    _rowIndex: row._rowIndex,
     grupo: row.grupo,
     name: row.identificacao,
     startDate: row.data_inicio,
@@ -195,7 +196,7 @@ function getLatestGoals(allGoals) {
       byGrupo[parsed.grupo] = { ...parsed, _date: date, id: parsed.grupo };
     }
   }
-  return Object.values(byGrupo).map(({ _date, ...rest }) => rest);
+  return Object.values(byGrupo).map(({ _date, _rowIndex, ...rest }) => rest);
 }
 
 // Get goal history for a specific patient
@@ -309,7 +310,7 @@ app.get('/api/patients/:grupoId/goal-history', async (req, res) => {
   }
 });
 
-// Update goals (add new goal row for existing protocol)
+// Update goals (in-place update on current protocol row)
 app.post('/api/patients/:grupoId/goals', async (req, res) => {
   if (!sheets) return res.status(503).json({ error: 'Google Sheets not initialized' });
 
@@ -322,50 +323,52 @@ app.post('/api/patients/:grupoId/goals', async (req, res) => {
     }
 
     // Get current patient data
-    const { goals } = await getAllGoalRows();
+    const { headers, goals } = await getAllGoalRows();
     const history = getGoalHistory(goals, grupoId);
     
     if (history.length === 0) return res.status(404).json({ error: 'Patient not found' });
 
-    const current = history[0]; // latest
-    const today = formatDate(new Date());
+    const current = history[0]; // latest protocol
+    
+    // _rowIndex is 0-based from dataRows (which start at row 2 in the sheet)
+    const sheetRow = current._rowIndex + 2; // +1 for header, +1 for 1-based
 
-    // Close current goal row: set endDate on previous entry
-    // (We'll handle this by convention — the app reads latest startDate)
+    // Find column indices for the macro targets
+    const colEnergy = headers.indexOf('meta_calorica');
+    const colProtein = headers.indexOf('meta_proteina');
+    const colCarbs = headers.indexOf('meta_carboidrato');
+    const colFats = headers.indexOf('meta_gordura');
 
-    // Append new goal row
-    const newRow = [
-      '', // UID
-      grupoId,
-      current.name,
-      '', // date_time
-      today, // data_inicio
-      '', // data_final
-      String(energy),
-      String(protein),
-      String(carbs),
-      String(fats),
-      String(current.initialWeight).replace('.', ','), // keep same initial weight
-      '', // peso_final
-      current.goal,
-      current.medication,
-      current.email
+    if (colEnergy < 0 || colProtein < 0 || colCarbs < 0 || colFats < 0) {
+      return res.status(500).json({ error: 'Goal columns not found in sheet headers' });
+    }
+
+    // Helper: column index to A1 letter
+    const colLetter = (idx) => String.fromCharCode(65 + idx);
+
+    // Update each macro cell in-place on the existing row
+    const updates = [
+      { range: `Goals!${colLetter(colEnergy)}${sheetRow}`, values: [[String(energy)]] },
+      { range: `Goals!${colLetter(colProtein)}${sheetRow}`, values: [[String(protein)]] },
+      { range: `Goals!${colLetter(colCarbs)}${sheetRow}`, values: [[String(carbs)]] },
+      { range: `Goals!${colLetter(colFats)}${sheetRow}`, values: [[String(fats)]] },
     ];
 
-    await sheets.spreadsheets.values.append({
+    await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Goals!A:O',
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [newRow] }
+      requestBody: {
+        valueInputOption: 'USER_ENTERED',
+        data: updates,
+      }
     });
     invalidateCache(SPREADSHEET_ID);
 
-    console.log(`✅ Goals updated for ${current.name} (${grupoId}): ${energy}kcal, ${protein}g prot`);
+    console.log(`✅ Goals updated IN-PLACE (row ${sheetRow}) for ${current.name} (${grupoId}): ${energy}kcal, ${protein}g prot`);
     
     res.json({ 
       success: true, 
       message: 'Goals updated',
-      newGoals: { energy, protein, carbs, fats, startDate: today }
+      newGoals: { energy, protein, carbs, fats, startDate: current.startDate }
     });
   } catch (error) {
     console.error('Error updating goals:', error);

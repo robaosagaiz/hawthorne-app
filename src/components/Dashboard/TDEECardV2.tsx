@@ -30,6 +30,7 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
   protocolUntil,
 }) => {
   const [result, setResult] = useState<EnergyModelResult | null>(null);
+  const [rawSeries, setRawSeries] = useState<SeriesPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -75,6 +76,7 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
           }));
           
           const modelResult = estimateEnergyMVP(profile, series);
+          setRawSeries(series);
           setResult(modelResult);
           setLoading(false);
         })
@@ -135,8 +137,15 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
     );
   }
 
-  // --- No data state ---
-  if (result.daily.length === 0 || !latestEE) {
+  // --- No data / insufficient data state ---
+  // Need at least 2 real weight readings and 7 days of data for meaningful TDEE
+  const uniqueWeightDays = new Set(
+    rawSeries.filter(s => s.weight_kg !== null && s.weight_kg > 0).map(s => s.date)
+  ).size;
+  const totalDays = result.daily.length;
+  const insufficientData = uniqueWeightDays < 2 || totalDays < 7;
+
+  if (result.daily.length === 0 || !latestEE || insufficientData) {
     return (
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="flex items-center gap-3 mb-4">
@@ -147,7 +156,13 @@ const TDEECardV2: React.FC<TDEECardV2Props> = ({
         </div>
         <div className="text-center py-6 text-gray-500">
           <Zap className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm">Registre seu peso e alimentação para ver o cálculo.</p>
+          <p className="text-sm">
+            {uniqueWeightDays < 2 
+              ? `Precisamos de pelo menos 2 pesagens para calcular. Você tem ${uniqueWeightDays}.`
+              : totalDays < 7
+                ? `Precisamos de pelo menos 7 dias de dados (${totalDays} até agora).`
+                : 'Registre seu peso e alimentação para ver o cálculo.'}
+          </p>
         </div>
       </div>
     );

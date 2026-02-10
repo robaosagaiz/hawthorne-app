@@ -88,14 +88,21 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId, protocolSince, prot
               });
             }
           }
-          mergedLogs.sort((a, b) => a.date.localeCompare(b.date));
+          mergedLogs.sort((a, b) => normalizeDate(a.date).localeCompare(normalizeDate(b.date)));
         }
 
-        // Inject initial weight from protocol (Goals) as first data point
+        // Inject initial weight from protocol (Goals) as the very first data point
+        // This ensures weight evolution always starts from the protocol's initial weight
         if (patient?.initialWeight && patient.initialWeight > 0 && patient?.startDate) {
           const startNorm = normalizeDate(patient.startDate);
-          const hasStartWeight = mergedLogs.some(l => normalizeDate(l.date) === startNorm && l.weight && l.weight > 0);
-          if (!hasStartWeight) {
+          // Remove any existing weight entry on start date (Activities may have a different value)
+          mergedLogs = mergedLogs.filter(l => !(normalizeDate(l.date) === startNorm && l.id?.startsWith('act-')));
+          // Always prepend the protocol initial weight as the first entry
+          const existingStartLog = mergedLogs.find(l => normalizeDate(l.date) === startNorm);
+          if (existingStartLog && existingStartLog.weight) {
+            // Override weight on existing food log entry for that date
+            existingStartLog.weight = patient.initialWeight;
+          } else {
             mergedLogs.unshift({
               id: `initial-weight`,
               date: patient.startDate,
@@ -103,6 +110,8 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId, protocolSince, prot
               weight: patient.initialWeight
             });
           }
+          // Re-sort after injection
+          mergedLogs.sort((a, b) => normalizeDate(a.date).localeCompare(normalizeDate(b.date)));
         }
 
         setAllLogs(mergedLogs);

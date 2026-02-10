@@ -72,31 +72,33 @@ const ActivitySection: React.FC<ActivitySectionProps> = ({ grupoId, isAdmin = fa
     setLoading(true);
 
     // Fetch activities (filtered by protocol date range)
-    // protocolStartDate === '' means "all protocols" → send ?since= (empty) to skip filter
     const actParams = new URLSearchParams();
     if (protocolStartDate !== undefined && protocolStartDate !== null) actParams.set('since', protocolStartDate);
     if (protocolUntilDate) actParams.set('until', protocolUntilDate);
     const actQuery = actParams.toString() ? `?${actParams.toString()}` : '';
-    fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}${actQuery}`)
-      .then(res => res.ok ? res.json() : [])
-      .then(data => { setActivities(Array.isArray(data) ? data : []); setLoading(false); })
-      .catch(() => setLoading(false));
 
-    // Fetch patient targets (includes activityTargets + initialWeight)
-    fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}`)
+    // Fetch both in parallel, only set loading=false when both complete
+    const activitiesPromise = fetch(`${API_BASE}/api/activities/${encodeURIComponent(grupoId)}${actQuery}`)
+      .then(res => res.ok ? res.json() : [])
+      .catch(() => []);
+
+    const patientPromise = fetch(`${API_BASE}/api/patients/${encodeURIComponent(grupoId)}`)
       .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data?.activityTargets) {
-          setActTargets(data.activityTargets);
-        }
-        if (data?.initialWeight && data.initialWeight > 0) {
-          setPatientInitialWeight(data.initialWeight);
-        }
-        if (data?.startDate) {
-          setPatientStartDate(data.startDate);
-        }
-      })
-      .catch(() => {});
+      .catch(() => null);
+
+    Promise.all([activitiesPromise, patientPromise]).then(([actData, patientData]) => {
+      setActivities(Array.isArray(actData) ? actData : []);
+      if (patientData?.activityTargets) {
+        setActTargets(patientData.activityTargets);
+      }
+      if (patientData?.initialWeight && patientData.initialWeight > 0) {
+        setPatientInitialWeight(patientData.initialWeight);
+      }
+      if (patientData?.startDate) {
+        setPatientStartDate(patientData.startDate);
+      }
+      setLoading(false);
+    });
   }, [grupoId, protocolStartDate, protocolUntilDate]);
 
   if (loading) {

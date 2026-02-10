@@ -91,6 +91,20 @@ const ProgressView: React.FC<ProgressViewProps> = ({ userId, protocolSince, prot
           mergedLogs.sort((a, b) => a.date.localeCompare(b.date));
         }
 
+        // Inject initial weight from protocol (Goals) as first data point
+        if (patient?.initialWeight && patient.initialWeight > 0 && patient?.startDate) {
+          const startNorm = normalizeDate(patient.startDate);
+          const hasStartWeight = mergedLogs.some(l => normalizeDate(l.date) === startNorm && l.weight && l.weight > 0);
+          if (!hasStartWeight) {
+            mergedLogs.unshift({
+              id: `initial-weight`,
+              date: patient.startDate,
+              energy: 0, protein: 0, carbs: 0, fats: 0,
+              weight: patient.initialWeight
+            });
+          }
+        }
+
         setAllLogs(mergedLogs);
       } catch (err) {
         console.error('ProgressView: error loading data', err);

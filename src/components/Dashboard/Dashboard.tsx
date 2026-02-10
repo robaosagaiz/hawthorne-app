@@ -108,11 +108,31 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocol
                 }
             }
 
-            return [...merged, ...weightOnlyEntries].sort((a, b) => a.date.localeCompare(b.date));
+            return [...merged, ...weightOnlyEntries].sort((a, b) => normalizeDate(a.date).localeCompare(normalizeDate(b.date)));
         } catch (err) {
             console.error('Error fetching activities for weight merge:', err);
             return dailyLogs;
         }
+    };
+
+    // Inject initial weight from protocol as first data point
+    const injectInitialWeight = (logs: DailyLog[], patient: { initialWeight?: number; startDate?: string } | null): DailyLog[] => {
+        if (!patient?.initialWeight || patient.initialWeight <= 0 || !patient?.startDate) return logs;
+        const startNorm = normalizeDate(patient.startDate);
+        // Remove activity-only weight entries on start date (protocol weight takes precedence)
+        let result = logs.filter(l => !(normalizeDate(l.date) === startNorm && l.id?.startsWith('activity-')));
+        const existingStartLog = result.find(l => normalizeDate(l.date) === startNorm);
+        if (existingStartLog) {
+            existingStartLog.weight = patient.initialWeight;
+        } else {
+            result.unshift({
+                id: 'initial-weight',
+                date: patient.startDate,
+                energy: 0, protein: 0, carbs: 0, fats: 0,
+                weight: patient.initialWeight
+            });
+        }
+        return result.sort((a, b) => normalizeDate(a.date).localeCompare(normalizeDate(b.date)));
     };
 
     useEffect(() => {
@@ -162,14 +182,16 @@ const Dashboard: React.FC<DashboardProps> = ({ userId, isAdmin = false, protocol
                     const apiLogs = await fetchDailyLogsFromApi(targetId, since, protocolUntil);
                     if (apiLogs.length > 0) {
                         // Merge weight data from Activities
-                        const mergedLogs = await fetchAndMergeWeights(apiLogs, targetId, sinceForActivities);
+                        let mergedLogs = await fetchAndMergeWeights(apiLogs, targetId, sinceForActivities);
+                        mergedLogs = injectInitialWeight(mergedLogs, patient);
                         setLogs(mergedLogs);
                         setDataSource('api');
                         setLoading(false);
                         return;
                     } else {
                         // Even without food logs, try to get activity weights (for weight chart + TDEE)
-                        const weightLogs = await fetchAndMergeWeights([], targetId, sinceForActivities);
+                        let weightLogs = await fetchAndMergeWeights([], targetId, sinceForActivities);
+                        weightLogs = injectInitialWeight(weightLogs, patient);
                         if (weightLogs.length > 0) {
                             setLogs(weightLogs);
                             setDataSource('api');

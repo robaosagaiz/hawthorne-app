@@ -3,7 +3,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import logoImg from '../../assets/logo-128.png';
 import { linkUserToExistingData } from '../../services/dataService';
 
